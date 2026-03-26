@@ -122,8 +122,8 @@
             <p class="font-medium text-gray-800">{{ currentTime }}</p>
           </div>
           <div class="text-right">
-            <p class="text-gray-600">粗略定位</p>
-            <p class="font-medium text-gray-800">{{ location || '获取中...' }}</p>
+            <p class="text-gray-600">定位</p>
+            <p class="font-medium text-gray-800">不采集（无需定位）</p>
           </div>
         </div>
       </div>
@@ -178,7 +178,6 @@ const selectedCategory = ref('')
 const description = ref('')
 const building = ref('')
 const currentTime = ref('')
-const location = ref('')
 const uploading = ref(false)
 const uploadSuccess = ref(false)
 const uploadError = ref('')
@@ -207,24 +206,6 @@ const updateTime = () => {
     minute: '2-digit',
     second: '2-digit'
   })
-}
-
-const getLocation = () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude.toFixed(2)
-        const lng = position.coords.longitude.toFixed(2)
-        location.value = `小区${lat}°N, ${lng}°E`
-      },
-      (error) => {
-        location.value = '无法获取定位'
-      },
-      { enableHighAccuracy: false }
-    )
-  } else {
-    location.value = '不支持定位'
-  }
 }
 
 const handleFileSelect = (event) => {
@@ -280,7 +261,6 @@ const handleUpload = async () => {
     formData.append('description', description.value)
     formData.append('building', building.value)
     formData.append('timestamp', new Date().toISOString())
-    formData.append('location', location.value)
 
     await evidenceApi.upload(formData)
     
@@ -308,6 +288,5 @@ const goBack = () => {
 onMounted(() => {
   updateTime()
   setInterval(updateTime, 1000)
-  getLocation()
 })
 </script>

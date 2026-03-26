@@ -39,50 +39,58 @@ export async function onRequestPost(context) {
       const evidenceId = generateEvidenceId()
       const uploadTs = timestamp || new Date().toISOString()
       const watermarkText = buildWatermarkText(uploadTs, communityName, evidenceId)
-      
-      const fileBuffer = await file.arrayBuffer()
-      const originalHash = await generateHash(fileBuffer)
-      const transformed = await addWatermark(fileBuffer, file, uploadTs, communityName, evidenceId, location)
-      const hash = await generateHash(transformed.buffer)
-      const fileName = `${evidenceId}.${transformed.ext}`
-      
-      await env.R2.put(fileName, transformed.buffer, {
-        httpMetadata: {
-          contentType: transformed.contentType
-        },
-        customMetadata: {
-          evidenceId,
+
+      try {
+        const fileBuffer = await file.arrayBuffer()
+        const originalHash = await generateHash(fileBuffer)
+        const transformed = await addWatermark(fileBuffer, file, uploadTs, communityName, evidenceId, location)
+        const hash = await generateHash(transformed.buffer)
+        const fileName = `${evidenceId}.${transformed.ext}`
+
+        await env.R2.put(fileName, transformed.buffer, {
+          httpMetadata: {
+            contentType: transformed.contentType,
+          },
+        })
+
+        const evidence = {
+          id: evidenceId,
+          type: transformed.type,
+          category,
+          description,
+          building,
+          timestamp: uploadTs,
+          location,
+          // hash：以“最终入库文件内容”为准（含图片水印）
+          hash,
+          // originalHash：以“用户原始上传内容”为准（不含图片水印）
+          originalHash,
+          url: `/api/files/${fileName}`,
+          fileName,
+          fileExt: transformed.ext,
+          fileMimeType: transformed.contentType,
           watermarkText,
-          isVideoWatermarkOverlay: transformed.type === 'video' ? '1' : '0'
-        },
-      })
-      
-      const evidence = {
-        id: evidenceId,
-        type: transformed.type,
-        category,
-        description,
-        building,
-        timestamp: uploadTs,
-        location,
-        // hash：以“最终入库文件内容”为准（含图片水印）
-        hash,
-        // originalHash：以“用户原始上传内容”为准（不含图片水印）
-        originalHash,
-        url: `/api/files/${fileName}`,
-        fileName,
-        fileExt: transformed.ext,
-        fileMimeType: transformed.contentType,
-        watermarkText,
-        watermarkMode: transformed.type === 'video' ? 'overlay' : 'embedded',
-        hidden: false,
-        createdAt: new Date().toISOString()
+          watermarkMode: transformed.type === 'video' ? 'overlay' : 'embedded',
+          hidden: false,
+          createdAt: new Date().toISOString(),
+        }
+
+        await env.KV.put(`evidence:${evidenceId}`, JSON.stringify(evidence))
+        await env.KV.put(`evidence:byTime:${Date.now()}`, evidenceId)
+
+        evidenceList.push(evidence)
+      } catch (e) {
+        const message = e && (e.message || String(e))
+        return new Response(
+          JSON.stringify({
+            error: '媒体处理失败',
+            message,
+            evidenceId,
+            fileName: file?.name || '',
+          }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        )
       }
-      
-      await env.KV.put(`evidence:${evidenceId}`, JSON.stringify(evidence))
-      await env.KV.put(`evidence:byTime:${Date.now()}`, evidenceId)
-      
-      evidenceList.push(evidence)
     }
     
     return new Response(JSON.stringify({ 
@@ -96,7 +104,8 @@ export async function onRequestPost(context) {
     
   } catch (error) {
     console.error('Upload error:', error)
-    return new Response(JSON.stringify({ error: '上传失败' }), {
+    const msg = error && (error.message || String(error))
+    return new Response(JSON.stringify({ error: '上传失败', message: msg }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     })
@@ -160,7 +169,11 @@ async function addWatermark(buffer, file, timestamp, communityName, evidenceId, 
   const imageBitmap = await createImageBitmap(new Blob([buffer]))
   const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height)
   const ctx = canvas.getContext('2d')
-  
+
+  if (!ctx) {
+    throw new Error('Canvas 2d context unavailable')
+  }
+
   ctx.drawImage(imageBitmap, 0, 0)
   
   const fontSize = Math.max(16, Math.floor(imageBitmap.width / 30))
@@ -180,7 +193,16 @@ async function addWatermark(buffer, file, timestamp, communityName, evidenceId, 
   ctx.fillText(watermarkText, x, y)
   
   // 统一输出 jpeg，避免后续打包/读取时扩展名与内容类型不一致
-  const watermarkedBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 })
+  let watermarkedBlob = null
+  try {
+    watermarkedBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.92 })
+  } catch {
+    watermarkedBlob = await canvas.convertToBlob({ type: 'image/jpeg' })
+  }
+
+  if (!watermarkedBlob) {
+    throw new Error('Watermarked blob is empty')
+  }
   return {
     buffer: await watermarkedBlob.arrayBuffer(),
     ext: 'jpg',
