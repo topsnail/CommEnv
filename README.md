@@ -44,7 +44,9 @@ npm install
 
 哈希生成：运行后会输出一串 $2b$...，把它填到 Cloudflare 的 ADMIN_PASSWORD_HASH。
 登录时你仍然输入明文 123456。
-`node -e "const bcrypt=require('bcryptjs'); console.log(bcrypt.hashSync('123456', 10));"`
+```bash
+node -e "const bcrypt=require('bcryptjs'); console.log(bcrypt.hashSync('123456', 10));"
+```
 
 ### 3) 启动前后端
 

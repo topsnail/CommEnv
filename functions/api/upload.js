@@ -86,6 +86,10 @@ async function buildJpegVariant(bytes, preset) {
 export async function onRequestPost(context) {
   const { request, env } = context
   try {
+    if (!env?.DB) return json({ error: '服务未配置 D1（DB）绑定' }, 500)
+    if (!env?.R2 || typeof env.R2.put !== 'function') {
+      return json({ error: '服务未配置 R2 绑定' }, 500)
+    }
     await ensureSchema(env)
     const formData = await request.formData()
     const files = formData.getAll('files')
@@ -164,7 +168,8 @@ export async function onRequestPost(context) {
     return json({ success: true, data: out, message: '上传成功' })
   } catch (e) {
     console.error('Upload error:', e)
-    return json({ error: '上传失败' }, 500)
+    const detail = String(e?.message || '')
+    return json({ error: '上传失败', message: detail || 'unknown error' }, 500)
   }
 }
 

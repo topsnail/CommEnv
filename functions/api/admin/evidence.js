@@ -72,12 +72,14 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
     url: `/api/preview/${r.id}?kind=preview`,
     thumbUrl: `/api/preview/${r.id}?kind=thumb`,
     hash: r.hash_sha256,
+    status: r.status || 'normal',
     hidden: r.status !== 'normal',
   }))
 
   const totalRow = await env.DB.prepare('SELECT COUNT(*) AS c FROM evidence').first()
   const normalRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM evidence WHERE status = 'normal'").first()
-  const hiddenRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM evidence WHERE status != 'normal'").first()
+  const pendingRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM evidence WHERE status = 'pending'").first()
+  const hiddenRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM evidence WHERE status = 'hidden'").first()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const todayIso = today.toISOString()
@@ -91,6 +93,7 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
     stats: {
       total: Number(totalRow?.c || 0),
       normal: Number(normalRow?.c || 0),
+      pending: Number(pendingRow?.c || 0),
       hidden: Number(hiddenRow?.c || 0),
       today: Number(todayRow?.c || 0),
     },

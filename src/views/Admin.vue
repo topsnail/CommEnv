@@ -27,8 +27,9 @@
             <p class="text-2xl sm:text-3xl font-bold text-green-600">{{ stats.normal }}</p>
           </div>
           <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-gray-500 text-sm">已隐藏</p>
-            <p class="text-2xl sm:text-3xl font-bold text-red-600">{{ stats.hidden }}</p>
+            <p class="text-gray-500 text-sm">待审核</p>
+            <p class="text-2xl sm:text-3xl font-bold text-amber-600">{{ stats.pending }}</p>
+            <p class="text-xs text-gray-500 mt-1">已隐藏 {{ stats.hidden }}</p>
           </div>
           <div class="bg-white rounded-lg shadow p-4">
             <p class="text-gray-500 text-sm">今日新增</p>
@@ -119,16 +120,20 @@
                   <span
                     :class="[
                       'px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full',
-                      evidence.hidden ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                      evidence.status === 'normal'
+                        ? 'bg-green-100 text-green-800'
+                        : evidence.status === 'pending'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-red-100 text-red-800'
                     ]"
                   >
-                    {{ evidence.hidden ? '已隐藏' : '正常' }}
+                    {{ evidence.status === 'normal' ? '正常' : (evidence.status === 'pending' ? '待审核' : '已隐藏') }}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
                     @click="viewDetail(evidence)"
-                    class="text-blue-600 hover:text-blue-900 mr-3"
+                    class="inline-flex items-center px-2.5 py-1.5 mr-2 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs sm:text-sm font-semibold"
                   >
                     查看
                   </button>
@@ -144,7 +149,7 @@
                     @click="showEvidence(evidence.id)"
                     class="text-green-600 hover:text-green-900"
                   >
-                    显示
+                    {{ evidence.status === 'pending' ? '通过审核' : '恢复显示' }}
                   </button>
                 </td>
               </tr>
@@ -231,10 +236,14 @@
               <span
                 :class="[
                   'px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full',
-                  selectedEvidence.hidden ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                  selectedEvidence.status === 'normal'
+                    ? 'bg-green-100 text-green-800'
+                    : selectedEvidence.status === 'pending'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-red-100 text-red-800'
                 ]"
               >
-                {{ selectedEvidence.hidden ? '已隐藏' : '正常' }}
+                {{ selectedEvidence.status === 'normal' ? '正常' : (selectedEvidence.status === 'pending' ? '待审核' : '已隐藏') }}
               </span>
             </div>
           </div>
@@ -257,7 +266,7 @@ const loadingMore = ref(false)
 const selectedFilter = ref('')
 const hasMore = ref(false)
 const page = ref(1)
-const stats = ref({ total: 0, normal: 0, hidden: 0, today: 0 })
+const stats = ref({ total: 0, normal: 0, pending: 0, hidden: 0, today: 0 })
 const showDetailModal = ref(false)
 const selectedEvidence = ref(null)
 const selectedIds = ref([])
@@ -402,9 +411,13 @@ const hideEvidence = async (id) => {
   try {
     await adminApi.hideEvidence(id)
     const evidence = evidenceList.value.find(e => e.id === id)
-    if (evidence) evidence.hidden = true
-    stats.value.hidden++
-    stats.value.normal--
+    if (evidence) {
+      if (evidence.status === 'normal') stats.value.normal = Math.max(0, stats.value.normal - 1)
+      if (evidence.status === 'pending') stats.value.pending = Math.max(0, stats.value.pending - 1)
+      evidence.status = 'hidden'
+      evidence.hidden = true
+      stats.value.hidden++
+    }
   } catch (error) {
     alert('操作失败')
   }
@@ -414,9 +427,13 @@ const showEvidence = async (id) => {
   try {
     await adminApi.showEvidence(id)
     const evidence = evidenceList.value.find(e => e.id === id)
-    if (evidence) evidence.hidden = false
-    stats.value.hidden--
-    stats.value.normal++
+    if (evidence) {
+      if (evidence.status === 'hidden') stats.value.hidden = Math.max(0, stats.value.hidden - 1)
+      if (evidence.status === 'pending') stats.value.pending = Math.max(0, stats.value.pending - 1)
+      evidence.status = 'normal'
+      evidence.hidden = false
+      stats.value.normal++
+    }
   } catch (error) {
     alert('操作失败')
   }
