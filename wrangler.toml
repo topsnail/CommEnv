@@ -18,7 +18,3 @@ database_id = "commenv-db"
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "commenv-r2"
-
-[[rules]]
-type = "ESModule"
-globs = ["**/*.js"]
