@@ -95,15 +95,15 @@
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                   <input type="checkbox" :checked="allSelected" @change="toggleSelectAll($event)" />
                 </th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">ID</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-18">ID</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">类型</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-62">分类</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-70">分类</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-30">拍摄时间</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-30">上传时间</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">GPS</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">哈希</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-18">状态</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">操作</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-22">状态</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-42">操作</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
