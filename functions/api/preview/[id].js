@@ -15,7 +15,7 @@ function calcFitSize(srcW, srcH, maxW, maxH) {
   }
 }
 
-async function buildJpegVariant(bytes, preset) {
+async function buildImageVariant(bytes, preset, format = 'webp') {
   if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas === 'undefined') {
     throw new Error('IMAGE_TRANSFORM_UNAVAILABLE')
   }
@@ -25,7 +25,10 @@ async function buildJpegVariant(bytes, preset) {
   const canvas = new OffscreenCanvas(width, height)
   const ctx = canvas.getContext('2d')
   ctx.drawImage(bitmap, 0, 0, width, height)
-  const outBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: preset.quality })
+  const outBlob = await canvas.convertToBlob({
+    type: format === 'webp' ? 'image/webp' : 'image/jpeg',
+    quality: format === 'webp' ? Math.max(0.6, preset.quality - 0.1) : preset.quality
+  })
   return outBlob.arrayBuffer()
 }
 
@@ -39,6 +42,9 @@ export async function onRequestGet(context) {
 
     const kind = new URL(request.url).searchParams.get('kind') === 'preview' ? 'preview' : 'thumb'
     const preset = PRESETS[kind]
+    const acceptHeader = request.headers.get('accept') || ''
+    const supportsWebP = acceptHeader.includes('image/webp')
+    const format = supportsWebP ? 'webp' : 'jpeg'
     await ensureSchema(env)
 
     const row = await env.DB.prepare(
@@ -73,10 +79,10 @@ export async function onRequestGet(context) {
     if (!original) return new Response('文件不存在', { status: 404 })
     const bytes = await original.arrayBuffer()
     try {
-      const variantBytes = await buildJpegVariant(bytes, preset)
-      const variantKey = `${preset.keyPrefix}/${id}.jpg`
+      const variantBytes = await buildImageVariant(bytes, preset, format)
+      const variantKey = `${preset.keyPrefix}/${id}.${format}`
 
-      await env.R2.put(variantKey, variantBytes, { httpMetadata: { contentType: 'image/jpeg' } })
+      await env.R2.put(variantKey, variantBytes, { httpMetadata: { contentType: format === 'webp' ? 'image/webp' : 'image/jpeg' } })
       if (kind === 'preview') {
         await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(variantKey, id).run()
       } else {
@@ -86,7 +92,7 @@ export async function onRequestGet(context) {
       return new Response(variantBytes, {
         status: 200,
         headers: {
-          'Content-Type': 'image/jpeg',
+          'Content-Type': format === 'webp' ? 'image/webp' : 'image/jpeg',
           'Cache-Control': 'public, max-age=604800',
           'X-Content-Type-Options': 'nosniff',
         },
