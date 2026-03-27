@@ -10,7 +10,8 @@ const ALLOWED_CATEGORIES = new Set([
 ])
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024
-const PRESET_THUMB = { maxW: 360, maxH: 360, quality: 0.72, keyPrefix: 'thumb' }
+// 提高清晰度：缩略图尺寸与质量上调；同时更换 keyPrefix 以便旧缩略图自动失效重建
+const PRESET_THUMB = { maxW: 720, maxH: 720, quality: 0.86, keyPrefix: 'thumb2' }
 const PRESET_PREVIEW = { maxW: 1600, maxH: 1600, quality: 0.82, keyPrefix: 'preview' }
 
 function getExtAndMime(file) {
@@ -29,18 +30,19 @@ async function parseExif(buffer) {
   try {
     const parsed = await exifr.parse(buffer)
     const exif = parsed && typeof parsed === 'object' ? parsed : {}
-    const gpsLatRaw = exif.GPSLatitude ?? exif.latitude ?? exif.lat ?? null
-    const gpsLonRaw = exif.GPSLongitude ?? exif.longitude ?? exif.lon ?? null
+    const { lat: gpsLatRaw, lon: gpsLonRaw } = extractGpsDecimal(exif)
     const gpsLat = roundGps3(gpsLatRaw)
     const gpsLon = roundGps3(gpsLonRaw)
+
+    const datetimeOriginal = normalizeExifDateTimeOriginal(exif.DateTimeOriginal)
 
     return {
       exifJson: JSON.stringify(exif),
       make: exif.Make ? String(exif.Make) : null,
       model: exif.Model ? String(exif.Model) : null,
-      datetimeOriginal: exif.DateTimeOriginal
-        ? new Date(exif.DateTimeOriginal).toISOString()
-        : null,
+      // IMPORTANT: EXIF DateTimeOriginal 通常不含时区；这里以“本地时间”语义保存，
+      // 避免 new Date(...).toISOString() 引入的时区偏移。
+      datetimeOriginal,
       imageWidth: Number.isFinite(Number(exif.ImageWidth)) ? Number(exif.ImageWidth) : null,
       imageHeight: Number.isFinite(Number(exif.ImageHeight)) ? Number(exif.ImageHeight) : null,
       gpsLat,
@@ -58,6 +60,90 @@ async function parseExif(buffer) {
       gpsLon: null,
     }
   }
+}
+
+function dmsToDecimal(dms, ref) {
+  if (!Array.isArray(dms) || dms.length < 3) return null
+  const deg = Number(dms[0])
+  const min = Number(dms[1])
+  const sec = Number(dms[2])
+  if (!Number.isFinite(deg) || !Number.isFinite(min) || !Number.isFinite(sec)) return null
+  let v = deg + min / 60 + sec / 3600
+  const r = String(ref || '').toUpperCase()
+  if (r === 'S' || r === 'W') v = -v
+  return v
+}
+
+function extractGpsDecimal(exif) {
+  // 1) 优先使用 exifr 的派生字段（通常是十进制）
+  const lat1 = exif?.latitude ?? exif?.lat ?? null
+  const lon1 = exif?.longitude ?? exif?.lon ?? null
+  const nlat1 = Number(lat1)
+  const nlon1 = Number(lon1)
+  if (Number.isFinite(nlat1) && Number.isFinite(nlon1)) return { lat: nlat1, lon: nlon1 }
+
+  // 2) 常见 EXIF: GPSLatitude/GPSLongitude 为 DMS 数组 + Ref
+  const lat2 = dmsToDecimal(exif?.GPSLatitude, exif?.GPSLatitudeRef)
+  const lon2 = dmsToDecimal(exif?.GPSLongitude, exif?.GPSLongitudeRef)
+  if (Number.isFinite(lat2) && Number.isFinite(lon2)) return { lat: lat2, lon: lon2 }
+
+  // 3) 兜底：如果本来就是数值
+  const nlat3 = Number(exif?.GPSLatitude)
+  const nlon3 = Number(exif?.GPSLongitude)
+  if (Number.isFinite(nlat3) && Number.isFinite(nlon3)) return { lat: nlat3, lon: nlon3 }
+
+  return { lat: null, lon: null }
+}
+
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+
+// 返回形如 "YYYY-MM-DDTHH:mm:ss"（不带 Z）以表达“拍摄地本地时间”
+function normalizeExifDateTimeOriginal(v) {
+  if (!v) return null
+
+  // exifr 可能返回 Date
+  if (v instanceof Date) {
+    if (Number.isNaN(v.getTime())) return null
+    const y = v.getFullYear()
+    const m = pad2(v.getMonth() + 1)
+    const d = pad2(v.getDate())
+    const hh = pad2(v.getHours())
+    const mm = pad2(v.getMinutes())
+    const ss = pad2(v.getSeconds())
+    return `${y}-${m}-${d}T${hh}:${mm}:${ss}`
+  }
+
+  const s = String(v).trim()
+
+  // 常见 EXIF: "YYYY:MM:DD HH:mm:ss"
+  const m1 = s.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/)
+  if (m1) {
+    const [, yy, mo, dd, hh, mi, ss] = m1
+    return `${yy}-${mo}-${dd}T${hh}:${mi}:${ss}`
+  }
+
+  // 兼容 "YYYY-MM-DD HH:mm:ss"
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/)
+  if (m2) {
+    const [, yy, mo, dd, hh, mi, ss] = m2
+    return `${yy}-${mo}-${dd}T${hh}:${mi}:${ss}`
+  }
+
+  // 最后尝试：如果是可解析的 ISO 且不带时区，也直接存；带时区则转成本地时间字符串
+  const d = new Date(s)
+  if (!Number.isNaN(d.getTime())) {
+    const y = d.getFullYear()
+    const m = pad2(d.getMonth() + 1)
+    const dd = pad2(d.getDate())
+    const hh = pad2(d.getHours())
+    const mi = pad2(d.getMinutes())
+    const ss = pad2(d.getSeconds())
+    return `${y}-${m}-${dd}T${hh}:${mi}:${ss}`
+  }
+
+  return null
 }
 
 function calcFitSize(srcW, srcH, maxW, maxH) {

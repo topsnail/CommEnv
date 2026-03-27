@@ -2,7 +2,8 @@ import { ensureSchema } from '../../db/schema.js'
 import { requireAdminSession } from '../../lib/adminAuth.js'
 
 const PRESETS = {
-  thumb: { maxW: 360, maxH: 360, quality: 0.72, keyPrefix: 'thumb' },
+  // 提高清晰度：缩略图尺寸与质量上调；同时更换 keyPrefix 以便旧缩略图自动失效重建
+  thumb: { maxW: 720, maxH: 720, quality: 0.86, keyPrefix: 'thumb2' },
   preview: { maxW: 1600, maxH: 1600, quality: 0.82, keyPrefix: 'preview' },
 }
 
@@ -57,7 +58,10 @@ export async function onRequestGet(context) {
       if (!ok) return new Response('证据已隐藏', { status: 403 })
     }
 
-    const primaryKey = kind === 'preview' ? row.preview_key : row.thumb_key
+    // 仅信任与当前预设匹配的 key，避免一直命中旧的低清缩略图
+    const currentPrefix = `${preset.keyPrefix}/`
+    const primaryKeyRaw = kind === 'preview' ? row.preview_key : row.thumb_key
+    const primaryKey = (primaryKeyRaw && String(primaryKeyRaw).startsWith(currentPrefix)) ? primaryKeyRaw : null
     const secondaryKey = kind === 'thumb' ? row.preview_key : null
     const selectedKey = [primaryKey, secondaryKey].find((key) => key)
     if (selectedKey) {
@@ -65,7 +69,10 @@ export async function onRequestGet(context) {
       if (cached) {
         const headers = new Headers()
         cached.writeHttpMetadata(headers)
-        headers.set('Content-Type', 'image/jpeg')
+        // 不要强行覆盖 Content-Type，避免 WebP 被标成 jpeg
+        if (!headers.get('Content-Type')) {
+          headers.set('Content-Type', String(cached.httpMetadata?.contentType || 'application/octet-stream'))
+        }
         headers.set('Cache-Control', 'public, max-age=604800')
         headers.set('X-Content-Type-Options', 'nosniff')
         if (kind === 'thumb' && primaryKey !== selectedKey) {
