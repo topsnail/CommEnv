@@ -5,6 +5,8 @@ pages_build_output_dir = "dist"
 [vars]
 ENVIRONMENT = "production"
 COMMUNITY_NAME = "宏光合园"
+ADMIN_PASSWORD_HASH = "$2b$10$jQUsY3VbFuC.6rTUO2LuCediYmS7.dKtkAK3Dl.GJSdJi2FhCEpA2"
+ADMIN_PASSWORD_HASH_2= "$2b$10$WjpQBVLEMi0lRKAyf8SzOuXVfDJm21oycD1Ri/RRleWtqY3V/XtLi"
 
 [[d1_databases]]
 binding = "DB"
