@@ -89,43 +89,43 @@
 
         <div v-else class="bg-white rounded-lg shadow overflow-hidden">
           <div class="overflow-x-auto">
-          <table class="table-auto w-full divide-y divide-gray-200">
+          <table class="table-fixed w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                   <input type="checkbox" :checked="allSelected" @change="toggleSelectAll($event)" />
                 </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分类</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">拍摄时间</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">上传时间</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GPS</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">哈希</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">ID</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">类型</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-72">分类</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">拍摄时间</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">上传时间</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">GPS</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">哈希</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">状态</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">操作</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="evidence in filteredEvidence" :key="evidence.id">
-                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                   <input type="checkbox" :value="evidence.id" v-model="selectedIds" />
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ evidence.id.slice(-8) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ evidence.id.slice(-8) }}</td>
+                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
                   图片
                 </td>
                 <td
-                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-56 truncate"
+                  class="px-3 py-3 whitespace-nowrap text-sm text-gray-900 truncate"
                   :title="getCategoryName(evidence.category)"
                 >
                   {{ getCategoryName(evidence.category) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.exif?.datetimeOriginal || evidence.timestamp) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.timestamp) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900 max-w-32 truncate" :title="formatGps(evidence.exif?.gps)">{{ formatGps(evidence.exif?.gps) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900 max-w-56 truncate" :title="evidence.hash">{{ evidence.hash }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.exif?.datetimeOriginal || evidence.timestamp) }}</td>
+                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.timestamp) }}</td>
+                <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate" :title="formatGps(evidence.exif?.gps)">{{ formatGps(evidence.exif?.gps) }}</td>
+                <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate font-mono" :title="evidence.hash">{{ formatHashShort(evidence.hash) }}</td>
+                <td class="px-3 py-3 whitespace-nowrap">
                   <span
                     :class="[
                       'px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full',
@@ -139,7 +139,7 @@
                     {{ evidence.status === 'normal' ? '正常' : (evidence.status === 'pending' ? '待审核' : '已隐藏') }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td class="px-3 py-3 whitespace-nowrap text-sm font-medium">
                   <div class="flex items-center gap-2">
                     <button
                       @click="viewDetail(evidence)"
@@ -407,6 +407,13 @@ const formatGps = (gps) => {
   const lon = Number(gps.lon)
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '-'
   return `${lat.toFixed(3)}, ${lon.toFixed(3)}`
+}
+
+const formatHashShort = (hash) => {
+  const s = String(hash || '')
+  if (!s) return '-'
+  if (s.length <= 16) return s
+  return `${s.slice(0, 8)}…${s.slice(-8)}`
 }
 
 const viewDetail = (evidence) => {

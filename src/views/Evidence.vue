@@ -98,12 +98,18 @@
       @click="closeImageModal"
     >
       <div class="max-w-full max-h-full flex flex-col items-center" @click.stop>
-        <img :src="selectedImage?.previewUrl || selectedImage?.url" :alt="selectedImage?.description" class="max-w-full max-h-[75vh] object-contain" decoding="async" />
+        <img
+          :src="selectedImage?.previewUrl || selectedImage?.url"
+          :alt="selectedImage?.description"
+          class="max-w-full max-h-[75vh] object-contain"
+          decoding="async"
+          @load="onModalImgLoad"
+        />
         <div class="mt-3 w-full max-w-3xl bg-white/95 rounded-lg p-3 text-xs text-gray-700">
           <p><strong>EXIF拍摄时间：</strong>{{ formatExifTime(selectedImage?.exif?.datetimeOriginal) }}</p>
           <p><strong>设备型号：</strong>{{ formatDevice(selectedImage?.exif) }}</p>
           <p><strong>是否包含GPS：</strong>{{ formatGpsPresence(selectedImage?.exif) }}</p>
-          <p><strong>尺寸：</strong>{{ formatSize(selectedImage?.exif) }}</p>
+          <p><strong>尺寸：</strong>{{ formatSize(selectedImage?.exif, modalImgSize) }}</p>
           <p><strong>文件哈希：</strong>{{ selectedImage?.hash || '-' }}</p>
         </div>
       </div>
@@ -127,6 +133,7 @@ const hasMore = ref(false)
 const page = ref(1)
 const showImageModal = ref(false)
 const selectedImage = ref(null)
+const modalImgSize = ref({ w: null, h: null })
 
 const categories = [
   { id: '', name: '全部', icon: '📋' },
@@ -225,10 +232,25 @@ const formatDate = (timestamp) => {
 }
 
 const formatExifTime = (v) => {
-  if (!v) return '-'
-  const d = new Date(v)
-  if (Number.isNaN(d.getTime())) return '-'
-  return formatDate(v)
+  const d = parseExifDate(v)
+  if (!d) return '-'
+  return formatDate(d)
+}
+
+// 后端保存的 EXIF 时间通常为 "YYYY-MM-DDTHH:mm:ss"（不带 Z），表达本地时间语义；
+// 这里做兼容解析，避免浏览器/环境差异导致的错误或偏移。
+const parseExifDate = (v) => {
+  if (!v) return null
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v
+  const s = String(v).trim()
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (m) {
+    const [, yy, mo, dd, hh, mi, ss] = m
+    const d = new Date(Number(yy), Number(mo) - 1, Number(dd), Number(hh), Number(mi), Number(ss || '0'))
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? null : d
 }
 
 const formatGpsPresence = (exif) => {
@@ -244,12 +266,14 @@ const formatDevice = (exif) => {
   return text || '-'
 }
 
-const formatSize = (exif) => {
-  if (!exif || typeof exif !== 'object') return '-'
-  const w = Number(exif.imageWidth)
-  const h = Number(exif.imageHeight)
-  if (!Number.isFinite(w) || !Number.isFinite(h)) return '-'
-  return `${w} x ${h}`
+const formatSize = (exif, runtimeSizeRef) => {
+  const w = Number(exif?.imageWidth)
+  const h = Number(exif?.imageHeight)
+  if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) return `${w} x ${h}`
+  const rw = Number(runtimeSizeRef?.value?.w)
+  const rh = Number(runtimeSizeRef?.value?.h)
+  if (Number.isFinite(rw) && Number.isFinite(rh) && rw > 0 && rh > 0) return `${rw} x ${rh}`
+  return '-'
 }
 
 const formatExifSummary = (exif) => {
@@ -264,12 +288,23 @@ const formatExifSummary = (exif) => {
 
 const showImage = (evidence) => {
   selectedImage.value = evidence
+  modalImgSize.value = { w: null, h: null }
   showImageModal.value = true
 }
 
 const closeImageModal = () => {
   showImageModal.value = false
   selectedImage.value = null
+  modalImgSize.value = { w: null, h: null }
+}
+
+const onModalImgLoad = (e) => {
+  const img = e?.target
+  const w = Number(img?.naturalWidth)
+  const h = Number(img?.naturalHeight)
+  if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+    modalImgSize.value = { w, h }
+  }
 }
 
 // 列表缩略图如果由于服务端生成失败返回 503，会触发 onerror。
