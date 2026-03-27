@@ -95,15 +95,15 @@
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                   <input type="checkbox" :checked="allSelected" @change="toggleSelectAll($event)" />
                 </th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">ID</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">类型</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-72">分类</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">拍摄时间</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">上传时间</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">GPS</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">哈希</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">状态</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">操作</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">ID</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">类型</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-62">分类</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-30">拍摄时间</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-30">上传时间</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">GPS</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">哈希</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-18">状态</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">操作</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -124,7 +124,7 @@
                 <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.exif?.datetimeOriginal || evidence.timestamp) }}</td>
                 <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.timestamp) }}</td>
                 <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate" :title="formatGps(evidence.exif?.gps)">{{ formatGps(evidence.exif?.gps) }}</td>
-                <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate font-mono" :title="evidence.hash">{{ formatHashShort(evidence.hash) }}</td>
+                <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate font-mono tracking-tight" :title="evidence.hash">{{ formatHashShort(evidence.hash) }}</td>
                 <td class="px-3 py-3 whitespace-nowrap">
                   <span
                     :class="[
@@ -390,8 +390,30 @@ const getCategoryName = (categoryId) => {
   return legacy[categoryId] || '未知'
 }
 
+const parseLocalDateTimeLike = (v) => {
+  if (!v) return null
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v
+  const s = String(v).trim()
+  // 兼容旧数据：曾把 EXIF 本地时间保存成带 Z 的 ISO（当 UTC 展示会 +8 小时）
+  if (/Z$/i.test(s)) {
+    const d0 = new Date(s)
+    if (Number.isNaN(d0.getTime())) return null
+    return new Date(d0.getTime() + d0.getTimezoneOffset() * 60_000)
+  }
+  // "YYYY-MM-DDTHH:mm:ss"（不带时区）按本地时间构造，避免不同浏览器当 UTC 解析
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (m) {
+    const [, yy, mo, dd, hh, mi, ss] = m
+    const d = new Date(Number(yy), Number(mo) - 1, Number(dd), Number(hh), Number(mi), Number(ss || '0'))
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 const formatDate = (timestamp) => {
-  const date = new Date(timestamp)
+  const date = parseLocalDateTimeLike(timestamp)
+  if (!date) return '-'
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -412,8 +434,8 @@ const formatGps = (gps) => {
 const formatHashShort = (hash) => {
   const s = String(hash || '')
   if (!s) return '-'
-  if (s.length <= 16) return s
-  return `${s.slice(0, 8)}…${s.slice(-8)}`
+  if (s.length <= 12) return s
+  return `${s.slice(0, 6)}…${s.slice(-6)}`
 }
 
 const viewDetail = (evidence) => {

@@ -243,6 +243,13 @@ const parseExifDate = (v) => {
   if (!v) return null
   if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v
   const s = String(v).trim()
+  // 兼容旧数据：曾经把“本地时间”错误保存为带 Z 的 ISO（被当成 UTC），展示会 +8 小时。
+  // 这里将其按“本地时间语义”还原（相当于减去当前时区偏移）。
+  if (/Z$/i.test(s)) {
+    const d0 = new Date(s)
+    if (Number.isNaN(d0.getTime())) return null
+    return new Date(d0.getTime() + d0.getTimezoneOffset() * 60_000)
+  }
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/)
   if (m) {
     const [, yy, mo, dd, hh, mi, ss] = m
