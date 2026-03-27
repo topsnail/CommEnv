@@ -43,7 +43,7 @@
 
       <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3.5 rounded-r-lg">
         <p class="text-sm text-yellow-800">
-          <strong>提示：</strong>公众页面不展示精确 GPS 坐标，仅展示是否包含定位信息。
+          <strong>提示：</strong>公众页面不展示精确 GPS 坐标，仅展示是否包含GPS信息。
         </p>
       </div>
     </div>

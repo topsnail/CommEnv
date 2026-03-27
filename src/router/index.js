@@ -43,4 +43,31 @@ const router = createRouter({
   routes
 })
 
+async function hasAdminSession() {
+  try {
+    const res = await fetch('/api/admin/evidence?page=1', {
+      method: 'GET',
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+router.beforeEach(async (to) => {
+  if (to.name === 'Admin') {
+    const ok = await hasAdminSession()
+    if (!ok) return { name: 'AdminLogin' }
+    return true
+  }
+  if (to.name === 'AdminLogin') {
+    const ok = await hasAdminSession()
+    if (ok) return { name: 'Admin' }
+    return true
+  }
+  return true
+})
+
 export default router

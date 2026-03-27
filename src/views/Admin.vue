@@ -2,10 +2,15 @@
   <div class="min-h-screen bg-gray-100">
     <div class="max-w-6xl mx-auto page-shell">
       <div class="flex justify-between items-center section-gap">
-        <h1 class="page-title">管理员后台</h1>
-        <button @click="logout" class="bg-red-600 text-white px-3.5 py-2 rounded-lg hover:bg-red-700 text-sm font-semibold">
-          退出登录
-        </button>
+        <h1 class="page-title">管理后台</h1>
+        <div class="flex items-center gap-2">
+          <button @click="goHome" class="bg-blue-600 text-white px-3.5 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold">
+            返回首页
+          </button>
+          <button @click="logout" class="bg-red-600 text-white px-3.5 py-2 rounded-lg hover:bg-red-700 text-sm font-semibold">
+            退出登录
+          </button>
+        </div>
       </div>
 
       <div class="bg-white rounded-lg shadow section-gap">
@@ -19,7 +24,7 @@
       <div>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 section-gap">
           <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-gray-500 text-sm">总证据数</p>
+            <p class="text-gray-500 text-sm">总图片数</p>
             <p class="text-2xl sm:text-3xl font-bold text-gray-800">{{ stats.total }}</p>
           </div>
           <div class="bg-white rounded-lg shadow p-4">
@@ -84,7 +89,7 @@
 
         <div v-else class="bg-white rounded-lg shadow overflow-hidden">
           <div class="overflow-x-auto">
-          <table class="min-w-[1260px] w-full divide-y divide-gray-200">
+          <table class="table-auto w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -110,13 +115,16 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   图片
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-56 truncate"
+                  :title="getCategoryName(evidence.category)"
+                >
                   {{ getCategoryName(evidence.category) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.exif?.datetimeOriginal || evidence.timestamp) }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.timestamp) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatGps(evidence.exif?.gps) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900 max-w-48 truncate">{{ evidence.hash }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900 max-w-32 truncate" :title="formatGps(evidence.exif?.gps)">{{ formatGps(evidence.exif?.gps) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-900 max-w-56 truncate" :title="evidence.hash">{{ evidence.hash }}</td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span
                     :class="[
@@ -132,26 +140,28 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    @click="viewDetail(evidence)"
-                    class="inline-flex items-center px-2.5 py-1.5 mr-2 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs sm:text-sm font-semibold"
-                  >
-                    查看
-                  </button>
-                  <button
-                    v-if="!evidence.hidden"
-                    @click="hideEvidence(evidence.id)"
-                    class="text-red-600 hover:text-red-900"
-                  >
-                    隐藏
-                  </button>
-                  <button
-                    v-else
-                    @click="showEvidence(evidence.id)"
-                    class="text-green-600 hover:text-green-900"
-                  >
-                    {{ evidence.status === 'pending' ? '通过审核' : '恢复显示' }}
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      @click="viewDetail(evidence)"
+                      class="inline-flex items-center px-2.5 py-1.5 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs sm:text-sm font-semibold"
+                    >
+                      查看
+                    </button>
+                    <button
+                      v-if="!evidence.hidden"
+                      @click="hideEvidence(evidence.id)"
+                      class="inline-flex items-center px-2.5 py-1.5 rounded-md border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-xs sm:text-sm font-semibold"
+                    >
+                      隐藏
+                    </button>
+                    <button
+                      v-else
+                      @click="showEvidence(evidence.id)"
+                      class="inline-flex items-center px-2.5 py-1.5 rounded-md border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 text-xs sm:text-sm font-semibold"
+                    >
+                      {{ evidence.status === 'pending' ? '通过审核' : '恢复显示' }}
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -477,6 +487,10 @@ const logout = () => {
   adminApi.logout().finally(() => {
     router.push('/admin/login')
   })
+}
+
+const goHome = () => {
+  router.push('/')
 }
 
 const mediaUrl = (url) => {

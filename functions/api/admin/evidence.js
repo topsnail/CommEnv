@@ -52,7 +52,7 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
   const offset = (page - 1) * pageSize
   const where = category ? 'WHERE category = ?' : ''
   const listSql = `
-    SELECT id, category, description, status, upload_time, hash_sha256, exif_json, original_key
+    SELECT id, category, description, status, upload_time, hash_sha256, exif_json, original_key, gps_lat, gps_lon
     FROM evidence
     ${where}
     ORDER BY upload_time DESC
@@ -62,7 +62,7 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
     ? await env.DB.prepare(listSql).bind(category, pageSize, offset).all()
     : await env.DB.prepare(listSql).bind(pageSize, offset).all()
   const list = (listRows.results || []).map((r) => ({
-    exif: normalizeExif(safeJson(r.exif_json)),
+    exif: normalizeExif(safeJson(r.exif_json), r),
     id: r.id,
     type: 'image',
     category: r.category,
@@ -110,10 +110,12 @@ function safeJson(raw) {
   }
 }
 
-function normalizeExif(exif) {
+function normalizeExif(exif, row = {}) {
   const out = exif && typeof exif === 'object' ? { ...exif } : {}
-  const lat = Number(out.GPSLatitude ?? out.latitude ?? out.lat)
-  const lon = Number(out.GPSLongitude ?? out.longitude ?? out.lon)
+  const rowLat = Number(row?.gps_lat)
+  const rowLon = Number(row?.gps_lon)
+  const lat = Number.isFinite(rowLat) ? rowLat : Number(out.GPSLatitude ?? out.latitude ?? out.lat)
+  const lon = Number.isFinite(rowLon) ? rowLon : Number(out.GPSLongitude ?? out.longitude ?? out.lon)
   if (Number.isFinite(lat) && Number.isFinite(lon)) {
     out.gps = { lat, lon }
   } else {

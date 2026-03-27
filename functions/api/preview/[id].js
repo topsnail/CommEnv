@@ -51,15 +51,20 @@ export async function onRequestGet(context) {
       if (!ok) return new Response('证据已隐藏', { status: 403 })
     }
 
-    const cachedKey = kind === 'preview' ? row.preview_key : row.thumb_key
-    if (cachedKey) {
-      const cached = await env.R2.get(String(cachedKey))
+    const primaryKey = kind === 'preview' ? row.preview_key : row.thumb_key
+    const secondaryKey = kind === 'thumb' ? row.preview_key : null
+    const selectedKey = [primaryKey, secondaryKey].find((key) => key)
+    if (selectedKey) {
+      const cached = await env.R2.get(String(selectedKey))
       if (cached) {
         const headers = new Headers()
         cached.writeHttpMetadata(headers)
         headers.set('Content-Type', 'image/jpeg')
-        headers.set('Cache-Control', 'public, max-age=86400')
+        headers.set('Cache-Control', 'public, max-age=604800')
         headers.set('X-Content-Type-Options', 'nosniff')
+        if (kind === 'thumb' && primaryKey !== selectedKey) {
+          headers.set('X-Preview-Fallback', 'preview-cached')
+        }
         return new Response(cached.body, { headers })
       }
     }
@@ -82,13 +87,23 @@ export async function onRequestGet(context) {
         status: 200,
         headers: {
           'Content-Type': 'image/jpeg',
-          'Cache-Control': 'public, max-age=86400',
+          'Cache-Control': 'public, max-age=604800',
           'X-Content-Type-Options': 'nosniff',
         },
       })
     } catch (err) {
       // 本地/部分运行时不支持图像处理 API，回退原图以保证联调可用。
       if (String(err?.message || '').includes('IMAGE_TRANSFORM_UNAVAILABLE')) {
+        if (kind === 'thumb') {
+          return new Response('缩略图暂不可用', {
+            status: 503,
+            headers: {
+              'Cache-Control': 'no-store',
+              'X-Content-Type-Options': 'nosniff',
+              'X-Preview-Fallback': 'unavailable',
+            },
+          })
+        }
         const headers = new Headers()
         original.writeHttpMetadata(headers)
         headers.set('Cache-Control', 'public, max-age=600')

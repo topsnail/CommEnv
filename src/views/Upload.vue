@@ -124,8 +124,8 @@
         <textarea
           v-model="description"
           maxlength="100"
-          rows="3"
-          class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          rows="2"
+          class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="简单描述一下情况，100字以内"
         ></textarea>
         <p class="text-sm text-gray-500 mt-1">{{ description.length }}/100</p>
@@ -251,7 +251,7 @@
 
       <div v-if="uploadSuccess" class="mt-4 bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
         <p class="text-sm text-green-700">
-          <strong>上传成功！</strong>为避免上传色情、暴力、隐私等不合规图片，图片将有管理员通过审核后显示。
+          <strong>上传成功！</strong>为避免上传涉黄、暴力、隐私等不合规图片，图片将有管理员通过审核后显示。
         </p>
       </div>
 

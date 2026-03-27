@@ -55,6 +55,8 @@
                 :src="evidence.url"
                 :alt="evidence.description"
                 class="w-full h-full object-cover cursor-pointer"
+                loading="lazy"
+                decoding="async"
                 @click="showImage(evidence)"
               />
             </div>
@@ -95,11 +97,11 @@
       @click="closeImageModal"
     >
       <div class="max-w-full max-h-full flex flex-col items-center" @click.stop>
-        <img :src="selectedImage?.previewUrl || selectedImage?.url" :alt="selectedImage?.description" class="max-w-full max-h-[75vh] object-contain" />
+        <img :src="selectedImage?.previewUrl || selectedImage?.url" :alt="selectedImage?.description" class="max-w-full max-h-[75vh] object-contain" decoding="async" />
         <div class="mt-3 w-full max-w-3xl bg-white/95 rounded-lg p-3 text-xs text-gray-700">
           <p><strong>EXIF拍摄时间：</strong>{{ formatExifTime(selectedImage?.exif?.datetimeOriginal) }}</p>
           <p><strong>设备型号：</strong>{{ formatDevice(selectedImage?.exif) }}</p>
-          <p><strong>是否包含定位：</strong>{{ formatGpsPresence(selectedImage?.exif) }}</p>
+          <p><strong>是否包含GPS：</strong>{{ formatGpsPresence(selectedImage?.exif) }}</p>
           <p><strong>尺寸：</strong>{{ formatSize(selectedImage?.exif) }}</p>
           <p><strong>文件哈希：</strong>{{ selectedImage?.hash || '-' }}</p>
         </div>
@@ -230,7 +232,7 @@ const formatExifTime = (v) => {
 
 const formatGpsPresence = (exif) => {
   if (!exif || typeof exif !== 'object') return '未知'
-  return exif.hasGps ? '是（已记录原始坐标，仅后台使用）' : '否'
+  return exif.hasGps ? '是' : '否'
 }
 
 const formatDevice = (exif) => {
