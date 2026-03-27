@@ -1,19 +1,23 @@
 name = "commenv"
 compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
 
-[env.production]
-vars = { ENVIRONMENT = "production" }
+[vars]
+# 本地开发时的环境变量：用于模拟生产运行时。
+ENVIRONMENT = "production"
+# 管理员密码（仅用于本地开发模拟）：使用 bcrypt 哈希（生产请在 Pages 项目中配置同名变量）
+# 示例明文：ChangeThisAdmin123!
+ADMIN_PASSWORD_HASH = "$2b$10$kp2JF36Hv7hS0Gb.DTyy8O/VLRKM1kxUKGxDM5SH4qdMCBnLk/fHC"
+COMMUNITY_NAME = "宏光合园"
 
-[env.production.kv_namespaces]
-binding = "KV"
-id = "Commenv_KV"
+[[d1_databases]]
+binding = "DB"
+database_name = "commenv-db"
+database_id = "commenv-db"
 
-[env.production.r2_buckets]
+[[r2_buckets]]
 binding = "R2"
 bucket_name = "commenv-r2"
-
-[[env.production.vars]]
-ADMIN_PASSWORD = "YOUR_SECURE_ADMIN_PASSWORD"
 
 [[rules]]
 type = "ESModule"
