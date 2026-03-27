@@ -22,7 +22,7 @@
       </div>
 
       <div>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 section-gap">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 section-gap">
           <div class="bg-white rounded-lg shadow p-4">
             <p class="text-gray-500 text-sm">总图片数</p>
             <p class="text-2xl sm:text-3xl font-bold text-gray-800">{{ stats.total }}</p>

@@ -25,7 +25,7 @@
         <div v-if="loadingStats" class="text-center text-sm text-gray-600 py-4">
           正在加载统计信息...
         </div>
-        <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-5">
+        <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
           <div class="bg-white rounded-lg shadow card-pad">
             <p class="text-gray-500 text-sm">总图片数</p>
             <p class="text-2xl sm:text-3xl font-bold text-gray-800">{{ stats.total }}</p>
