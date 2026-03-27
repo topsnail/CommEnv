@@ -10,11 +10,3 @@ ENVIRONMENT = "production"
 ADMIN_PASSWORD_HASH = "$2b$10$kp2JF36Hv7hS0Gb.DTyy8O/VLRKM1kxUKGxDM5SH4qdMCBnLk/fHC"
 COMMUNITY_NAME = "宏光合园"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "commenv-db"
-database_id = "commenv-db"
-
-[[r2_buckets]]
-binding = "R2"
-bucket_name = "commenv-r2"
