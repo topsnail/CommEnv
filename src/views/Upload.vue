@@ -190,9 +190,9 @@
             <p><strong>3.</strong> 本站会读取并留存原图 EXIF（如拍摄时间、GPS），但不会修改原图文件内容。</p>
           </div>
 
-          <label class="mt-4 flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+          <label class="mt-4 flex items-start gap-2 text-sm text-gray-700 cursor-pointer group">
             <input type="checkbox" v-model="complianceChecked" class="mt-1" />
-            <span>我已确认以上内容，愿意继续上传。</span>
+            <span class="group-hover:text-blue-600 transition-colors">我已确认以上内容，愿意继续上传。</span>
           </label>
 
           <div class="mt-4 flex gap-2.5">
@@ -215,36 +215,70 @@
 
       <div
         v-if="showCategoryPicker"
-        class="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+        class="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-0 sm:p-4 transition-opacity duration-300 ease-in-out"
         @click="closeCategoryPicker"
       >
-        <div class="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[80vh] overflow-hidden" @click.stop>
-          <div class="p-3.5 border-b">
+        <div class="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[85vh] flex flex-col transform transition-all duration-300 ease-in-out sm:translate-y-0 translate-y-4 opacity-0"
+             :class="{'opacity-100 sm:translate-y-0 translate-y-0': showCategoryPicker}" @click.stop>
+          <div class="p-3 border-b flex-shrink-0">
             <div class="flex items-center justify-between gap-2">
               <h3 class="text-base sm:text-lg font-bold text-gray-800">选择问题分类</h3>
               <button class="text-gray-500 hover:text-gray-700" @click="closeCategoryPicker">关闭</button>
             </div>
-            <input
-              v-model="categoryKeyword"
-              type="text"
-              placeholder="搜索分类关键词..."
-              class="mt-3 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            <div class="relative mt-2">
+              <input
+                ref="categorySearchInput"
+                v-model="categoryKeyword"
+                type="text"
+                placeholder="搜索分类关键词..."
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <button
+                v-if="categoryKeyword"
+                type="button"
+                @click="clearSearch"
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <div class="overflow-y-auto p-3 space-y-1.5">
-            <button
-              v-for="cat in filteredCategories"
-              :key="cat.id"
-              type="button"
-              @click="selectCategory(cat.id)"
-              :class="[
-                'w-full text-left border rounded-lg px-3 py-2 transition-colors',
-                selectedCategory === cat.id ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 hover:border-blue-300'
-              ]"
-            >
-              <div class="text-sm font-semibold leading-snug">{{ cat.icon }} {{ cat.name }}</div>
-            </button>
-            <p v-if="filteredCategories.length === 0" class="text-sm text-gray-500 text-center py-4">没有匹配的分类</p>
+          <div class="overflow-y-auto p-3 space-y-3 flex-1">
+            <div v-for="group in filteredCategories" :key="group.group" class="space-y-1">
+              <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider px-1">{{ group.group }}</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <button
+                  v-for="(cat, index) in group.items"
+                  :key="cat.id"
+                  type="button"
+                  @click="selectCategory(cat.id)"
+                  :class="[
+                    'w-full text-left border rounded-lg px-2.5 py-1.5 transition-colors',
+                    selectedCategory === cat.id ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 hover:border-blue-300',
+                    activeCategoryIndex === index ? 'ring-2 ring-blue-500' : ''
+                  ]"
+                >
+                  <div class="text-sm font-semibold leading-snug" v-html="`${cat.icon} ${highlightKeyword(cat.name, categoryKeyword)}`"></div>
+                </button>
+              </div>
+            </div>
+            <div v-if="filteredCategories.length === 0" class="text-center py-8">
+              <div class="text-4xl mb-3">🔍</div>
+              <p class="text-sm text-gray-500 mb-2">未找到与 "<span class="font-medium text-gray-700">{{ categoryKeyword }}</span>" 相关的分类</p>
+              <p class="text-xs text-gray-400 mb-4">请尝试其他关键词或查看所有分类</p>
+              <button
+                type="button"
+                @click="clearSearch"
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                清除搜索
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -265,7 +299,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { evidenceApi } from '@/api'
 
@@ -288,46 +322,120 @@ const uploadError = ref('')
 const categoryKeyword = ref('')
 
 const categories = [
-  { id: 'CAT01', name: '环境卫生脏乱，绿化养护缺失', icon: '🧹' },
-  { id: 'CAT02', name: '垃圾清运不及时，异味油污严重', icon: '🗑️' },
-  { id: 'CAT03', name: '楼道堆物占道，小广告泛滥', icon: '📌' },
-  { id: 'CAT04', name: '电梯故障频发，维保记录缺失', icon: '🛗' },
-  { id: 'CAT05', name: '公共设施破损，路灯监控失效', icon: '📷' },
-  { id: 'CAT06', name: '道路积水破损，供水水质异常', icon: '💧' },
-  { id: 'CAT07', name: '外墙脱落渗水，建筑本体破损', icon: '🏚️' },
-  { id: 'CAT08', name: '消防通道堵塞，消防器材过期', icon: '🧯' },
-  { id: 'CAT09', name: '门禁安保松懈，外来人员随意进出', icon: '🚪' },
-  { id: 'CAT10', name: '电动车乱停，飞线充电隐患', icon: '⚡' },
-  { id: 'CAT11', name: '车辆无序停放，僵尸车占用公共资源', icon: '🅿️' },
-  { id: 'CAT12', name: '私搭乱建，违规拆改承重墙', icon: '🏗️' },
-  { id: 'CAT13', name: '养宠不文明，宠物粪便、噪音扰民', icon: '🐾' },
-  { id: 'CAT14', name: '商贩占道经营，底商油烟噪音扰民', icon: '🍢' },
-  { id: 'CAT15', name: '物业通知滞后，信息公示不透明', icon: '📣' },
-  { id: 'CAT16', name: '公共收益不明，账目未公开', icon: '💰' },
-  { id: 'CAT17', name: '维修质量差，报修响应迟缓', icon: '🧰' },
-  { id: 'CAT18', name: '巡检记录缺失或造假', icon: '🧾' },
-  { id: 'CAT19', name: '应急物资不足，安全演练流于形式', icon: '🚨' },
-  { id: 'CAT20', name: '其他物业服务与管理问题', icon: '🧩' },
+  {
+    group: '环境与卫生',
+    items: [
+      { id: 'CAT01', name: '环境卫生脏乱，绿化养护缺失', icon: '🧹' },
+      { id: 'CAT02', name: '垃圾清运不及时，异味油污严重', icon: '🗑️' },
+      { id: 'CAT03', name: '楼道堆物占道，小广告泛滥', icon: '📌' }
+    ]
+  },
+  {
+    group: '设施与安全',
+    items: [
+      { id: 'CAT04', name: '电梯故障频发，维保记录缺失', icon: '🛗' },
+      { id: 'CAT05', name: '公共设施破损，路灯监控失效', icon: '📷' },
+      { id: 'CAT06', name: '道路积水破损，供水水质异常', icon: '💧' },
+      { id: 'CAT07', name: '外墙脱落渗水，建筑本体破损', icon: '🏚️' },
+      { id: 'CAT08', name: '消防通道堵塞，消防器材过期', icon: '🧯' },
+      { id: 'CAT09', name: '门禁安保松懈，外来人员随意进出', icon: '🚪' }
+    ]
+  },
+  {
+    group: '秩序与管理',
+    items: [
+      { id: 'CAT10', name: '电动车乱停，飞线充电隐患', icon: '⚡' },
+      { id: 'CAT11', name: '车辆无序停放，僵尸车占用公共资源', icon: '🅿️' },
+      { id: 'CAT12', name: '私搭乱建，违规拆改承重墙', icon: '🏗️' },
+      { id: 'CAT13', name: '养宠不文明，宠物粪便、噪音扰民', icon: '🐾' },
+      { id: 'CAT14', name: '商贩占道经营，底商油烟噪音扰民', icon: '🍢' }
+    ]
+  },
+  {
+    group: '服务与响应',
+    items: [
+      { id: 'CAT15', name: '物业通知滞后，信息公示不透明', icon: '📣' },
+      { id: 'CAT16', name: '公共收益不明，账目未公开', icon: '💰' },
+      { id: 'CAT17', name: '维修质量差，报修响应迟缓', icon: '🧰' },
+      { id: 'CAT18', name: '巡检记录缺失或造假', icon: '🧾' },
+      { id: 'CAT19', name: '应急物资不足，安全演练流于形式', icon: '🚨' },
+      { id: 'CAT20', name: '其他物业服务与响应问题', icon: '🧩' }
+    ]
+  }
 ]
 
 const canUpload = computed(() => {
   return selectedFiles.value.length > 0 && selectedCategory.value
 })
 const selectedCategoryName = computed(() => {
-  const c = categories.find((v) => v.id === selectedCategory.value)
-  return c ? `${c.icon} ${c.name}` : ''
+  for (const group of categories) {
+    const c = group.items.find((v) => v.id === selectedCategory.value)
+    if (c) return `${c.icon} ${c.name}`
+  }
+  return ''
 })
+
 const filteredCategories = computed(() => {
   const kw = categoryKeyword.value.trim()
   if (!kw) return categories
-  return categories.filter((c) => c.name.includes(kw) || c.id.toLowerCase().includes(kw.toLowerCase()))
+  
+  const lowerKw = kw.toLowerCase()
+  const filtered = []
+  
+  for (const group of categories) {
+    const filteredItems = group.items.filter((c) => 
+      c.name.toLowerCase().includes(lowerKw) || 
+      c.id.toLowerCase().includes(lowerKw)
+    )
+    if (filteredItems.length > 0) {
+      filtered.push({ ...group, items: filteredItems })
+    }
+  }
+  
+  return filtered
 })
+
+const highlightKeyword = (text, keyword) => {
+  if (!keyword.trim()) return text
+  const lowerKeyword = keyword.toLowerCase()
+  const lowerText = text.toLowerCase()
+  let result = ''
+  let lastIndex = 0
+  
+  while (true) {
+    const index = lowerText.indexOf(lowerKeyword, lastIndex)
+    if (index === -1) {
+      result += text.slice(lastIndex)
+      break
+    }
+    result += text.slice(lastIndex, index)
+    result += `<span class="bg-yellow-200 px-0.5 rounded">${text.slice(index, index + keyword.length)}</span>`
+    lastIndex = index + keyword.length
+  }
+  
+  return result
+}
+
+const categorySearchInput = ref(null)
+const activeCategoryIndex = ref(-1)
 
 const openCategoryPicker = () => {
   showCategoryPicker.value = true
+  activeCategoryIndex.value = -1
+  // 延迟聚焦，确保DOM已经渲染
+  setTimeout(() => {
+    categorySearchInput.value?.focus()
+  }, 100)
 }
 const closeCategoryPicker = () => {
   showCategoryPicker.value = false
+}
+const clearSearch = () => {
+  categoryKeyword.value = ''
+  // 清除后重新聚焦搜索框
+  setTimeout(() => {
+    categorySearchInput.value?.focus()
+  }, 100)
 }
 const selectCategory = (id) => {
   selectedCategory.value = id
@@ -544,5 +652,31 @@ const doUpload = async () => {
 const goBack = () => {
   router.push('/')
 }
+
+// 键盘事件处理
+const handleKeydown = (event) => {
+  if (event.key === 'Escape' && showCategoryPicker.value) {
+    closeCategoryPicker()
+  } else if (showCategoryPicker.value) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      activeCategoryIndex.value = (activeCategoryIndex.value + 1) % filteredCategories.value.length
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      activeCategoryIndex.value = activeCategoryIndex.value <= 0 ? filteredCategories.value.length - 1 : activeCategoryIndex.value - 1
+    } else if (event.key === 'Enter' && activeCategoryIndex.value >= 0) {
+      event.preventDefault()
+      selectCategory(filteredCategories.value[activeCategoryIndex.value].id)
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
 
 </script>

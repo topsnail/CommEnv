@@ -190,7 +190,7 @@
       <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="p-6">
           <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold">证据详情</h3>
+            <h3 class="text-xl font-bold">图片详情</h3>
             <button @click="closeDetailModal" class="text-gray-500 hover:text-gray-700">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -305,7 +305,7 @@ const categories = [
   { id: 'CAT17', name: '维修质量差，报修响应迟缓' },
   { id: 'CAT18', name: '巡检记录缺失或造假' },
   { id: 'CAT19', name: '应急物资不足，安全演练流于形式' },
-  { id: 'CAT20', name: '其他物业服务与管理问题' },
+  { id: 'CAT20', name: '其他物业服务与响应问题' },
 ]
 
 const filteredEvidence = computed(() => {

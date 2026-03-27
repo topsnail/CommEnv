@@ -149,7 +149,7 @@ const categories = [
   { id: 'CAT17', name: '维修质量差，报修响应迟缓', icon: '🧰' },
   { id: 'CAT18', name: '巡检记录缺失或造假', icon: '🧾' },
   { id: 'CAT19', name: '应急物资不足，安全演练流于形式', icon: '🚨' },
-  { id: 'CAT20', name: '其他物业服务与管理问题', icon: '🧩' },
+  { id: 'CAT20', name: '其他物业服务与响应问题', icon: '🧩' },
 ]
 
 const filteredEvidence = computed(() => {

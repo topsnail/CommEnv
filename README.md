@@ -1,6 +1,6 @@
-# 小区公共环境存证归集平台
+# 小区公共环境存证归集
 
-用于记录小区公共区域环境问题的证据归集系统。  
+用于记录小区公共区域环境问题的证据归集系统。\
 当前版本聚焦：匿名上传、原图留存、后台审核、导出与打包。
 
 ## 当前能力（与代码一致）
@@ -39,11 +39,12 @@ npm install
 - `ADMIN_PASSWORD_HASH`
 - `ADMIN_PASSWORD_HASH_2`（可选）
 
-> 若配置了任意 `*_HASH`，系统会忽略明文密码变量。  
+> 若配置了任意 `*_HASH`，系统会忽略明文密码变量。\
 > 仅在未配置任何哈希时，才会回退使用 `ADMIN_PASSWORD` / `ADMIN_PASSWORD_2`。
 
-哈希生成：运行后会输出一串 $2b$...，把它填到 Cloudflare 的 ADMIN_PASSWORD_HASH。
+哈希生成：运行后会输出一串 $2b$...，把它填到 Cloudflare 的 ADMIN\_PASSWORD\_HASH。
 登录时你仍然输入明文 123456。
+
 ```bash
 node -e "const bcrypt=require('bcryptjs'); console.log(bcrypt.hashSync('123456', 10));"
 ```
@@ -111,6 +112,6 @@ npm run dev:all
 - 平台提供存储与展示能力，不承诺当然具备司法采信效力
 - 证据效力以司法机关结合形成过程、真实性、完整性进行认定
 
----
+***
 
 最后更新：2026-03-27

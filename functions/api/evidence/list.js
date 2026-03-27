@@ -62,6 +62,9 @@ async function getEvidenceList(env, category, page, pageSize) {
       imageHeight: Number.isFinite(Number(r.image_height)) ? Number(r.image_height) : null,
       hasGps:
         Number.isFinite(Number(r.gps_lat)) && Number.isFinite(Number(r.gps_lon)),
+      gps: (Number.isFinite(Number(r.gps_lat)) && Number.isFinite(Number(r.gps_lon)))
+        ? { lat: Number(r.gps_lat), lon: Number(r.gps_lon) }
+        : null,
     },
     hidden: false,
   }))

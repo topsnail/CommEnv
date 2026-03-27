@@ -47,6 +47,9 @@ export async function onRequestGet(context) {
         imageHeight: Number.isFinite(Number(row.image_height)) ? Number(row.image_height) : null,
         hasGps:
           Number.isFinite(Number(row.gps_lat)) && Number.isFinite(Number(row.gps_lon)),
+        gps: (Number.isFinite(Number(row.gps_lat)) && Number.isFinite(Number(row.gps_lon)))
+          ? { lat: Number(row.gps_lat), lon: Number(row.gps_lon) }
+          : null,
       },
       hidden: false,
     }

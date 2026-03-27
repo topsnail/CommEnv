@@ -72,7 +72,7 @@ export async function onRequestGet(context) {
         CAT17: '维修质量差，报修响应迟缓',
         CAT18: '巡检记录缺失或造假',
         CAT19: '应急物资不足，安全演练流于形式',
-        CAT20: '其他物业服务与管理问题',
+        CAT20: '其他物业服务与响应问题',
       }
 
       sheet.addRow({
