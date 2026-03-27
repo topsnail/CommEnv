@@ -53,10 +53,12 @@ async function handleDownload(context) {
             headers: { 'Content-Type': 'application/json' }
           })
         }
-        const outExt = String(fileName).toLowerCase().endsWith('.png') ? 'png' : 'jpg'
+        // 使用 original_key 的 basename 作为 ZIP 内文件名，确保扩展名与原图一致
+        // original_key 示例：original/<uuid>.jpg|png
+        const basename = String(fileName).split('/').pop() || String(fileName)
         files.push({
           // zip slip 防护：去除路径分隔符，避免嵌套目录/回溯路径
-          name: sanitizeZipEntryName(`${evidence.category}_${evidence.id}.${outExt}`),
+          name: sanitizeZipEntryName(basename),
           buffer
         })
       }
