@@ -93,6 +93,9 @@ export async function onRequestPost(context) {
     await ensureSchema(env)
     const formData = await request.formData()
     const files = formData.getAll('files')
+    // 派生图（仅用于展示缩略图/预览），不会影响 original 与 EXIF 读取
+    const thumbs = formData.getAll('thumbs')
+    const previews = formData.getAll('previews')
     const category = String(formData.get('category') || '')
     const description = String(formData.get('description') || '')
 
@@ -103,7 +106,8 @@ export async function onRequestPost(context) {
     const uploadTime = new Date().toISOString()
     const out = []
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
       const fileSpec = getExtAndMime(file)
       if (!fileSpec) return json({ error: '仅支持 jpg、jpeg、png 格式' }, 400)
       const size = Number(file?.size || 0)
@@ -132,26 +136,47 @@ export async function onRequestPost(context) {
         exif.imageWidth, exif.imageHeight, originalKey, fileSpec.mime, size
       ).run()
 
-      // 预热生成预览图与缩略图，避免首次访问时才生成
+      // 写入预览图与缩略图（优先使用前端派生图；服务器不依赖图像变换能力）
       try {
-        const [thumbBytes, previewBytes] = await Promise.all([
-          buildJpegVariant(bytes, PRESET_THUMB),
-          buildJpegVariant(bytes, PRESET_PREVIEW),
-        ])
         const thumbKey = `${PRESET_THUMB.keyPrefix}/${id}.jpg`
         const previewKey = `${PRESET_PREVIEW.keyPrefix}/${id}.jpg`
-        await Promise.all([
-          env.R2.put(thumbKey, thumbBytes, { httpMetadata: { contentType: 'image/jpeg' } }),
-          env.R2.put(previewKey, previewBytes, { httpMetadata: { contentType: 'image/jpeg' } }),
-        ])
-        await env.DB.prepare('UPDATE evidence SET thumb_key = ?, preview_key = ? WHERE id = ?')
-          .bind(thumbKey, previewKey, id)
-          .run()
-      } catch (previewErr) {
-        // 预热失败不影响主上传成功，后续可由 /api/preview 动态补建
-        if (!String(previewErr?.message || '').includes('IMAGE_TRANSFORM_UNAVAILABLE')) {
-          console.warn('preview warmup failed:', id, previewErr)
+        
+        const clientThumbFile = thumbs?.[i]
+        const clientPreviewFile = previews?.[i]
+        const needThumb = !clientThumbFile
+        const needPreview = !clientPreviewFile
+
+        // 1) 如果前端已经提供派生图，直接落盘
+        if (clientThumbFile) {
+          const thumbBytes = await clientThumbFile.arrayBuffer()
+          await env.R2.put(thumbKey, thumbBytes, { httpMetadata: { contentType: 'image/jpeg' } })
+          await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(thumbKey, id).run()
         }
+        if (clientPreviewFile) {
+          const previewBytes = await clientPreviewFile.arrayBuffer()
+          await env.R2.put(previewKey, previewBytes, { httpMetadata: { contentType: 'image/jpeg' } })
+          await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(previewKey, id).run()
+        }
+
+        // 2) 缺少派生图时，才尝试服务器端生成（兼容本地/部分运行时）
+        if (needThumb || needPreview) {
+          const [thumbBytes, previewBytes] = await Promise.all([
+            needThumb ? buildJpegVariant(bytes, PRESET_THUMB) : Promise.resolve(null),
+            needPreview ? buildJpegVariant(bytes, PRESET_PREVIEW) : Promise.resolve(null),
+          ])
+
+          if (thumbBytes) {
+            await env.R2.put(thumbKey, thumbBytes, { httpMetadata: { contentType: 'image/jpeg' } })
+            await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(thumbKey, id).run()
+          }
+          if (previewBytes) {
+            await env.R2.put(previewKey, previewBytes, { httpMetadata: { contentType: 'image/jpeg' } })
+            await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(previewKey, id).run()
+          }
+        }
+      } catch (previewErr) {
+        // 派生图失败不影响 original 入库与 EXIF 解析；前台会降级到 preview 或提示稍后重试
+        if (!String(previewErr?.message || '').includes('IMAGE_TRANSFORM_UNAVAILABLE')) console.warn('preview warmup failed:', id, previewErr)
       }
 
       out.push({

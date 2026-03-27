@@ -388,6 +388,79 @@ const closeComplianceModal = () => {
   showComplianceModal.value = false
 }
 
+const PRESET_THUMB_CLIENT = { maxW: 360, maxH: 360, quality: 0.72 }
+const PRESET_PREVIEW_CLIENT = { maxW: 1600, maxH: 1600, quality: 0.82 }
+
+function calcFitSize(srcW, srcH, maxW, maxH) {
+  if (!srcW || !srcH) return { width: maxW, height: maxH }
+  const ratio = Math.min(maxW / srcW, maxH / srcH, 1)
+  return {
+    width: Math.max(1, Math.round(srcW * ratio)),
+    height: Math.max(1, Math.round(srcH * ratio)),
+  }
+}
+
+function loadImageFromBlob(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+    img.decoding = 'async'
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve(img)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('IMAGE_LOAD_FAILED'))
+    }
+    img.src = url
+  })
+}
+
+async function buildJpegVariantBlob(fileOrBlob, preset) {
+  const img = await loadImageFromBlob(fileOrBlob)
+  const { width, height } = calcFitSize(img.naturalWidth, img.naturalHeight, preset.maxW, preset.maxH)
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('CANVAS_CONTEXT_UNAVAILABLE')
+  ctx.drawImage(img, 0, 0, width, height)
+
+  const outBlob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => {
+        if (!b) return reject(new Error('TO_BLOB_FAILED'))
+        resolve(b)
+      },
+      'image/jpeg',
+      preset.quality,
+    )
+  })
+  return outBlob
+}
+
+async function buildPlaceholderJpegBlob() {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1
+  canvas.height = 1
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('CANVAS_CONTEXT_UNAVAILABLE')
+  ctx.fillStyle = '#808080'
+  ctx.fillRect(0, 0, 1, 1)
+  const outBlob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => {
+        if (!b) return reject(new Error('TO_BLOB_FAILED'))
+        resolve(b)
+      },
+      'image/jpeg',
+      0.7,
+    )
+  })
+  return outBlob
+}
+
 const confirmAndUpload = async () => {
   if (!complianceChecked.value) return
   showComplianceModal.value = false
@@ -406,10 +479,26 @@ const doUpload = async () => {
   try {
     const formData = new FormData()
 
+    // 原图必须保持不改动；缩略图/预览图仅用于展示，由前端生成并作为派生文件上传。
+    const placeholder = await buildPlaceholderJpegBlob()
+
     for (let i = 0; i < selectedFiles.value.length; i++) {
       const raw = selectedFiles.value[i]
-      // 原图直传：不做任何像素/EXIF 改动
       formData.append('files', raw)
+
+      // 为了保证服务端按索引一一对应，thumb/preview 这里“必定 append”（失败则用 placeholder 占位）
+      try {
+        const [thumbBlob, previewBlob] = await Promise.all([
+          buildJpegVariantBlob(raw, PRESET_THUMB_CLIENT),
+          buildJpegVariantBlob(raw, PRESET_PREVIEW_CLIENT),
+        ])
+        formData.append('thumbs', thumbBlob, `thumb-${raw.name}.jpg`)
+        formData.append('previews', previewBlob, `preview-${raw.name}.jpg`)
+      } catch (e) {
+        console.warn('client build variant failed:', raw?.name, e)
+        formData.append('thumbs', placeholder, `thumb-${raw.name}.jpg`)
+        formData.append('previews', placeholder, `preview-${raw.name}.jpg`)
+      }
     }
 
     formData.append('category', selectedCategory.value)

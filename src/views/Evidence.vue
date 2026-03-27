@@ -57,6 +57,7 @@
                 class="w-full h-full object-cover cursor-pointer"
                 loading="lazy"
                 decoding="async"
+                @error="onThumbError(evidence, $event)"
                 @click="showImage(evidence)"
               />
             </div>
@@ -269,6 +270,18 @@ const showImage = (evidence) => {
 const closeImageModal = () => {
   showImageModal.value = false
   selectedImage.value = null
+}
+
+// 列表缩略图如果由于服务端生成失败返回 503，会触发 onerror。
+// 这里降级到 preview（一般仍比原图小；若 preview 也失败，最终用户仍能看到兜底内容而不是空白）。
+const onThumbError = (evidence, event) => {
+  const next = evidence?.previewUrl
+  if (!next) return
+  if (evidence.url === next) return
+  evidence.url = next
+  if (event?.target && typeof event.target === 'object' && 'src' in event.target) {
+    event.target.src = next
+  }
 }
 
 // 3.3.MD 要求：移除公开留言/评论/互动功能
