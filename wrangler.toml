@@ -3,12 +3,15 @@ compatibility_date = "2024-01-01"
 pages_build_output_dir = "dist"
 
 [vars]
-# 本地开发时的环境变量：用于模拟生产运行时。
-# 管理员密码（仅用于本地开发模拟）：使用 bcrypt 哈希（生产请在 Pages 项目中配置同名变量）
-# 示例明文：ChangeThisAdmin123!
-ADMIN_PASSWORD_HASH = "$2b$10$jQUsY3VbFuC.6rTUO2LuCediYmS7.dKtkAK3Dl.GJSdJi2FhCEpA2"
-ADMIN_PASSWORD_HASH_2= "$2b$10$WjpQBVLEMi0lRKAyf8SzOuXVfDJm21oycD1Ri/RRleWtqY3V/XtLi"
 ENVIRONMENT = "production"
 COMMUNITY_NAME = "宏光合园"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "commenv-db"
+database_id = "2946161d-e296-4829-8737-2672dbd57f05"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "commenv-r2"
 
