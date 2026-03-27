@@ -7,17 +7,23 @@ const api = axios.create({
 })
 
 export const evidenceApi = {
-  upload: async (formData) => {
+  upload: async (formData, onProgress) => {
     const response = await api.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
-      }
+      },
+      onUploadProgress: typeof onProgress === 'function' ? onProgress : undefined,
     })
     return response.data
   },
 
   list: async (params) => {
     const response = await api.get('/evidence/list', { params })
+    return response.data
+  },
+
+  stats: async (params) => {
+    const response = await api.get('/evidence/stats', { params })
     return response.data
   },
 

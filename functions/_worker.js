@@ -26,6 +26,10 @@ export default {
       const mod = await import('./api/evidence/list.js')
       return mod.onRequestGet({ request, env })
     }
+    if (pathname === '/api/evidence/stats') {
+      const mod = await import('./api/evidence/stats.js')
+      return mod.onRequestGet({ request, env })
+    }
     if (pathname.startsWith('/api/evidence/verify')) {
       const mod = await import('./api/evidence/verify.js')
       return mod.onRequestPost({ request, env })

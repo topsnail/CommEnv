@@ -151,8 +151,21 @@
         :disabled="!canUpload || uploading"
         class="w-full btn-primary disabled:bg-gray-400 disabled:cursor-not-allowed"
       >
-        {{ uploading ? '上传中...' : '确认上传' }}
+        {{ uploading ? `上传中 ${uploadProgress}%` : '确认上传' }}
       </button>
+
+      <div v-if="uploading || uploadProgress > 0" class="mt-3 bg-white rounded-lg border border-gray-200 p-3">
+        <div class="flex items-center justify-between text-xs text-gray-600 mb-1.5">
+          <span>{{ uploadStatusText }}</span>
+          <span>{{ uploadProgress }}%</span>
+        </div>
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            class="h-full bg-blue-600 transition-all duration-300"
+            :style="{ width: `${uploadProgress}%` }"
+          ></div>
+        </div>
+      </div>
 
       <!-- 强制合规确认（ZHILING 要求：上传前必须弹窗并需用户确认） -->
       <div
@@ -268,6 +281,8 @@ const showComplianceModal = ref(false)
 const showCategoryPicker = ref(false)
 const complianceChecked = ref(false)
 const uploading = ref(false)
+const uploadProgress = ref(0)
+const uploadStatusText = ref('')
 const uploadSuccess = ref(false)
 const uploadError = ref('')
 const categoryKeyword = ref('')
@@ -383,6 +398,8 @@ const doUpload = async () => {
   if (!canUpload.value) return
 
   uploading.value = true
+  uploadProgress.value = 0
+  uploadStatusText.value = '准备上传...'
   uploadSuccess.value = false
   uploadError.value = ''
 
@@ -398,7 +415,20 @@ const doUpload = async () => {
     formData.append('category', selectedCategory.value)
     formData.append('description', description.value)
 
-    await evidenceApi.upload(formData)
+    await evidenceApi.upload(formData, (progressEvent) => {
+      const total = Number(progressEvent?.total || 0)
+      const loaded = Number(progressEvent?.loaded || 0)
+      if (total > 0) {
+        const percent = Math.max(1, Math.min(99, Math.round((loaded / total) * 100)))
+        uploadProgress.value = percent
+      } else {
+        uploadProgress.value = Math.max(uploadProgress.value, 30)
+      }
+      uploadStatusText.value = '正在上传文件...'
+    })
+
+    uploadProgress.value = 100
+    uploadStatusText.value = '上传完成，等待管理员审核展示'
 
     uploadSuccess.value = true
     selectedFiles.value = []
@@ -410,7 +440,13 @@ const doUpload = async () => {
       router.push('/evidence')
     }, 2000)
   } catch (error) {
-    uploadError.value = error.response?.data?.message || error?.message || '上传失败，请重试'
+    uploadError.value =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error?.message ||
+      '上传失败，请重试'
+    uploadStatusText.value = '上传失败，请重试'
+    uploadProgress.value = 0
   } finally {
     uploading.value = false
   }

@@ -24,6 +24,31 @@
         </div>
       </div>
 
+      <div class="section-gap">
+        <div v-if="loadingStats" class="text-center text-sm text-gray-600 py-4">
+          正在加载统计信息...
+        </div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-5">
+          <div class="bg-white rounded-lg shadow card-pad">
+            <p class="text-gray-500 text-sm">总证据数</p>
+            <p class="text-2xl sm:text-3xl font-bold text-gray-800">{{ stats.total }}</p>
+          </div>
+          <div class="bg-white rounded-lg shadow card-pad">
+            <p class="text-gray-500 text-sm">正常图片</p>
+            <p class="text-2xl sm:text-3xl font-bold text-green-600">{{ stats.normal }}</p>
+          </div>
+          <div class="bg-white rounded-lg shadow card-pad">
+            <p class="text-gray-500 text-sm">待审核</p>
+            <p class="text-2xl sm:text-3xl font-bold text-amber-600">{{ stats.pending }}</p>
+            <p class="text-xs text-gray-500 mt-1">已隐藏 {{ stats.hidden }}</p>
+          </div>
+          <div class="bg-white rounded-lg shadow card-pad">
+            <p class="text-gray-500 text-sm">本月新增</p>
+            <p class="text-2xl sm:text-3xl font-bold text-blue-600">{{ stats.month }}</p>
+          </div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 section-gap">
         <div class="bg-white rounded-xl shadow-lg card-pad hover:shadow-xl transition-shadow">
           <div class="flex items-center mb-3">
@@ -128,9 +153,25 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { evidenceApi } from '@/api'
 
 const router = useRouter()
+
+const loadingStats = ref(true)
+const stats = ref({ total: 0, normal: 0, pending: 0, hidden: 0, month: 0 })
+
+onMounted(async () => {
+  try {
+    const res = await evidenceApi.stats({ period: 'month' })
+    if (res?.success && res?.data) stats.value = res.data
+  } catch (e) {
+    console.error('Load stats failed:', e)
+  } finally {
+    loadingStats.value = false
+  }
+})
 
 const goToUpload = () => {
   router.push('/upload')

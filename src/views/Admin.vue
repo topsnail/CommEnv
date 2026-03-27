@@ -11,7 +11,7 @@
       <div class="bg-white rounded-lg shadow section-gap">
         <div class="flex border-b">
           <button class="px-5 py-2.5 font-medium text-sm border-b-2 border-blue-600 text-blue-600">
-            证据管理
+            图片管理
           </button>
         </div>
       </div>
@@ -23,7 +23,7 @@
             <p class="text-2xl sm:text-3xl font-bold text-gray-800">{{ stats.total }}</p>
           </div>
           <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-gray-500 text-sm">正常证据</p>
+            <p class="text-gray-500 text-sm">正常图片</p>
             <p class="text-2xl sm:text-3xl font-bold text-green-600">{{ stats.normal }}</p>
           </div>
           <div class="bg-white rounded-lg shadow p-4">
@@ -32,8 +32,8 @@
             <p class="text-xs text-gray-500 mt-1">已隐藏 {{ stats.hidden }}</p>
           </div>
           <div class="bg-white rounded-lg shadow p-4">
-            <p class="text-gray-500 text-sm">今日新增</p>
-            <p class="text-2xl sm:text-3xl font-bold text-blue-600">{{ stats.today }}</p>
+            <p class="text-gray-500 text-sm">本月新增</p>
+            <p class="text-2xl sm:text-3xl font-bold text-blue-600">{{ stats.month }}</p>
           </div>
         </div>
 
@@ -83,7 +83,8 @@
         </div>
 
         <div v-else class="bg-white rounded-lg shadow overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
+          <div class="overflow-x-auto">
+          <table class="min-w-[1260px] w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -155,6 +156,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <div v-if="hasMore" class="text-center mt-8">
@@ -266,7 +268,7 @@ const loadingMore = ref(false)
 const selectedFilter = ref('')
 const hasMore = ref(false)
 const page = ref(1)
-const stats = ref({ total: 0, normal: 0, pending: 0, hidden: 0, today: 0 })
+const stats = ref({ total: 0, normal: 0, pending: 0, hidden: 0, month: 0 })
 const showDetailModal = ref(false)
 const selectedEvidence = ref(null)
 const selectedIds = ref([])

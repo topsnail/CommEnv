@@ -80,10 +80,11 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
   const normalRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM evidence WHERE status = 'normal'").first()
   const pendingRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM evidence WHERE status = 'pending'").first()
   const hiddenRow = await env.DB.prepare("SELECT COUNT(*) AS c FROM evidence WHERE status = 'hidden'").first()
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayIso = today.toISOString()
-  const todayRow = await env.DB.prepare('SELECT COUNT(*) AS c FROM evidence WHERE upload_time >= ?').bind(todayIso).first()
+  const month = new Date()
+  month.setDate(1)
+  month.setHours(0, 0, 0, 0)
+  const monthIso = month.toISOString()
+  const monthRow = await env.DB.prepare('SELECT COUNT(*) AS c FROM evidence WHERE upload_time >= ?').bind(monthIso).first()
   const filterTotalRow = category
     ? await env.DB.prepare('SELECT COUNT(*) AS c FROM evidence WHERE category = ?').bind(category).first()
     : totalRow
@@ -95,7 +96,7 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
       normal: Number(normalRow?.c || 0),
       pending: Number(pendingRow?.c || 0),
       hidden: Number(hiddenRow?.c || 0),
-      today: Number(todayRow?.c || 0),
+      month: Number(monthRow?.c || 0),
     },
     hasMore: offset + list.length < Number(filterTotalRow?.c || 0),
   }
