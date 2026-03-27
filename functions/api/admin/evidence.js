@@ -52,7 +52,7 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
   const offset = (page - 1) * pageSize
   const where = category ? 'WHERE category = ?' : ''
   const listSql = `
-    SELECT id, category, description, status, upload_time, hash_sha256, exif_json, original_key, gps_lat, gps_lon
+    SELECT id, category, description, status, upload_time, hash_sha256, exif_json, original_key, original_size, gps_lat, gps_lon
     FROM evidence
     ${where}
     ORDER BY upload_time DESC
@@ -72,6 +72,7 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
     url: `/api/preview/${r.id}?kind=preview`,
     thumbUrl: `/api/preview/${r.id}?kind=thumb`,
     hash: r.hash_sha256,
+    originalSize: r.original_size,
     status: r.status || 'normal',
     hidden: r.status !== 'normal',
   }))

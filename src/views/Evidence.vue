@@ -109,8 +109,6 @@
           <p><strong>EXIF拍摄时间：</strong>{{ formatExifTime(selectedImage?.exif?.datetimeOriginal) }}</p>
           <p><strong>设备型号：</strong>{{ formatDevice(selectedImage?.exif) }}</p>
           <p><strong>是否包含GPS：</strong>{{ formatGpsPresence(selectedImage?.exif) }}</p>
-          <p><strong>尺寸：</strong>{{ formatSize(selectedImage?.exif, modalImgSize) }}</p>
-          <p><strong>文件哈希：</strong>{{ selectedImage?.hash || '-' }}</p>
         </div>
       </div>
     </div>

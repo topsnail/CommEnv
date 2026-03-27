@@ -101,7 +101,7 @@
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-30">拍摄时间</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-30">上传时间</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">GPS</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">哈希</th>
+                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-26">文件大小</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-22">状态</th>
                 <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-42">操作</th>
               </tr>
@@ -124,7 +124,7 @@
                 <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.exif?.datetimeOriginal || evidence.timestamp) }}</td>
                 <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.timestamp) }}</td>
                 <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate" :title="formatGps(evidence.exif?.gps)">{{ formatGps(evidence.exif?.gps) }}</td>
-                <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate font-mono tracking-tight" :title="evidence.hash">{{ formatHashShort(evidence.hash) }}</td>
+                <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate" :title="`${evidence.originalSize} bytes`">{{ formatFileSize(evidence.originalSize) }}</td>
                 <td class="px-3 py-3 whitespace-nowrap">
                   <span
                     :class="[
@@ -436,6 +436,17 @@ const formatHashShort = (hash) => {
   if (!s) return '-'
   if (s.length <= 12) return s
   return `${s.slice(0, 6)}…${s.slice(-6)}`
+}
+
+const formatFileSize = (size) => {
+  const s = Number(size)
+  if (!Number.isFinite(s) || s < 0) return '-'
+  if (s === 0) return '0 B'
+  
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const k = 1024
+  const i = Math.floor(Math.log(s) / Math.log(k))
+  return `${(s / Math.pow(k, i)).toFixed(2)} ${units[i]}`
 }
 
 const viewDetail = (evidence) => {
