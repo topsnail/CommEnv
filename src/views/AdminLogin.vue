@@ -12,14 +12,23 @@
             <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
               密码
             </label>
-            <input
-              id="password"
-              v-model="password"
-              type="password"
-              class="input-base"
-              placeholder="请输入管理员密码"
-              required
-            />
+            <div class="relative">
+              <input
+                id="password"
+                v-model="password"
+                :type="showPassword ? 'text' : 'password'"
+                class="input-base pr-16"
+                placeholder="请输入管理员密码"
+                required
+              />
+              <button
+                type="button"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-blue-600 hover:text-blue-800"
+                @click="showPassword = !showPassword"
+              >
+                {{ showPassword ? '隐藏' : '显示' }}
+              </button>
+            </div>
           </div>
 
           <div v-if="error" class="mb-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
@@ -53,6 +62,7 @@ import { adminApi } from '@/api'
 const router = useRouter()
 
 const password = ref('')
+const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
 
