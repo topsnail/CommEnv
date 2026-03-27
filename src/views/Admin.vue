@@ -394,7 +394,7 @@ const parseLocalDateTimeLike = (v) => {
   if (!v) return null
   if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : v
   const s = String(v).trim()
-  // 兼容旧数据：曾把 EXIF 本地时间保存成带 Z 的 ISO（当 UTC 展示会 +8 小时）
+  // 兼容旧 数据：曾把 EXIF 本地时间保存成带 Z 的 ISO（当 UTC 展示会 +8 小时）
   if (/Z$/i.test(s)) {
     const d0 = new Date(s)
     if (Number.isNaN(d0.getTime())) return null
