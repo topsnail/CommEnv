@@ -2,7 +2,7 @@ import * as exifr from 'exifr'
 import { ensureSchema } from '../db/schema.js'
 import { json, newId, roundGps2, sha256Hex } from '../db/utils.js'
 import { ALLOWED_CATEGORIES } from '../lib/allowedCategories.js'
-import { buildJpegVariantUnderBudget, MAX_DERIVED_IMAGE_BYTES } from '../lib/imageBudget.js'
+import { buildJpegVariantUnderBudget } from '../lib/imageBudget.js'
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024
 
@@ -220,7 +220,7 @@ export async function onRequestPost(context) {
         exif.imageWidth, exif.imageHeight, originalKey, fileSpec.mime, size
       ).run()
 
-      // 派生图：优先浏览器生成的 JPEG（已 ≤200KB 则直存 R2，Worker 无需 Canvas）；否则尝试服务端生成
+      // 派生图：优先浏览器生成的 JPEG（直存 R2）；否则尝试服务端生成
       try {
         const partArrays = { smalls, thumbs, previews }
 

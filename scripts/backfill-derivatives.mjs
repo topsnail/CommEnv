@@ -1,5 +1,5 @@
 /**
- * 历史证据补全：从 R2 读取 original，本地用 sharp 生成 small/thumb2/preview（≤200KB JPEG），
+ * 历史证据补全：从 R2 读取 original，本地用 sharp 生成 small/thumb2/preview（JPEG），
  * 写回 R2 并通过 D1 HTTP API 更新 small_key / thumb_key / preview_key。
  *
  * 需在本机 Node 运行（非 Worker）。不修改 original 对象。
@@ -30,7 +30,7 @@ import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
 
-const MAX_BYTES = 200 * 1024
+const MAX_BYTES = 10 * 1024 * 1024
 
 /** 与 functions/api/upload.js DERIVATIVE_SPECS 一致 */
 const SPECS = [

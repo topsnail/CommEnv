@@ -1,8 +1,8 @@
 /**
- * 浏览器端生成上传用派生图（与后端 imageBudget 目标一致：≤200KB）。
+ * 浏览器端生成上传用派生图（与后端 imageBudget 一致）。
  * Cloudflare Worker 常无 Canvas 编码能力，故在上传前生成并随表单提交。
  */
-export const MAX_DERIVED_BYTES = 200 * 1024
+export const MAX_DERIVED_BYTES = 10 * 1024 * 1024
 
 /** 与 functions/api/upload.js / preview PRESETS 对齐 */
 export const CLIENT_PRESETS = {

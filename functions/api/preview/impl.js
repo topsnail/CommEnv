@@ -47,7 +47,10 @@ const KIND_TO_DB_COLUMN = {
   thumb: 'thumb_key',
 }
 
-/** 用 arrayBuffer 再组装 Response，避免部分环境下直接传 R2 body 流导致未捕获异常 → 外层 503 */
+/**
+ * 用 arrayBuffer 再组装 Response，避免部分环境下直接传 R2 body 流导致异常。
+ * 仅拒绝极端异常体积（与单张原图 10MB 上限一致），避免误绑对象。
+ */
 async function responseFromCached(cached, extraHeaders = {}) {
   const headers = new Headers()
   try {
@@ -61,17 +64,12 @@ async function responseFromCached(cached, extraHeaders = {}) {
   headers.set('Cache-Control', 'public, max-age=604800')
   headers.set('X-Content-Type-Options', 'nosniff')
   Object.entries(extraHeaders).forEach(([k, v]) => headers.set(k, v))
-  try {
-    const buf = await cached.arrayBuffer()
-    // 全站展示仅用 ≤200KB 派生图；超标则换候选 key，不对外返回大图
-    if (buf.byteLength > MAX_DERIVED_IMAGE_BYTES) {
-      throw new Error('DERIVATIVE_OVER_BUDGET')
-    }
-    return new Response(buf, { headers })
-  } catch {
-    if (cached.body) return new Response(cached.body, { headers })
-    throw new Error('R2 object has no body')
+  const sz = cached.size
+  if (typeof sz === 'number' && sz > 10 * 1024 * 1024) {
+    throw new Error('OBJECT_TOO_LARGE')
   }
+  const buf = await cached.arrayBuffer()
+  return new Response(buf, { headers })
 }
 
 function previewUnavailableResponse() {

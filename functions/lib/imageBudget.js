@@ -1,7 +1,7 @@
 /**
- * 列表缩略图 / 中等预览图统一字节上限（与产品要求一致）
+ * 派生图编码时的字节上限（不再强制 200KB；与单张原图上限 10MB 对齐，避免无意义压到极小）。
  */
-export const MAX_DERIVED_IMAGE_BYTES = 200 * 1024
+export const MAX_DERIVED_IMAGE_BYTES = 10 * 1024 * 1024
 
 function safeCloseBitmap(bitmap) {
   try {

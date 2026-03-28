@@ -86,7 +86,7 @@
                 打包下载{{ selectedIds.length > 0 ? `（已选${selectedIds.length}）` : '（全部）' }}
               </button>
               <span class="text-sm text-gray-500 flex items-center">
-                👈为保证流畅度，界面中均为 ≤200KB 压缩图；原图仅可通过「打包下载」获取。
+                👈界面中均为压缩派生图；原图仅可通过「打包下载」获取。
               </span>
             </div>
           </div>
@@ -593,7 +593,7 @@ const mediaUrl = (url) => {
   return url
 }
 
-/** 详情弹窗：先中等图 preview，失败再试列表小图 url（均为 ≤200KB 派生图，非原图） */
+/** 详情弹窗：先中等图 preview，失败再试列表小图 url（均为派生图，非原图） */
 const onDetailImageError = (event) => {
   const ev = selectedEvidence.value
   const img = event?.target

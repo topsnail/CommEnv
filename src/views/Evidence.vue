@@ -329,7 +329,7 @@ const onModalImgLoad = (e) => {
   }
 }
 
-/** 放大图优先 kind=preview；失败则降级 kind=small（均为 ≤200KB 派生图） */
+/** 放大图优先 kind=preview；失败则降级 kind=small（均为派生图，非原图） */
 const onModalImgError = (e) => {
   const img = e?.target
   const ev = selectedImage.value
@@ -341,7 +341,7 @@ const onModalImgError = (e) => {
   }
 }
 
-// 列表为 kind=small（≤200KB）；失败则换 kind=preview（同为派生图）。均失败则占位，不加载原图。
+// 列表为 kind=small；失败则换 kind=preview（同为派生图）。均失败则占位，不加载原图。
 const onThumbError = (evidence, event) => {
   const next = evidence?.previewUrl
   if (!next) {
