@@ -2,12 +2,36 @@ import * as exifr from 'exifr'
 import { ensureSchema } from '../db/schema.js'
 import { json, newId, roundGps2, sha256Hex } from '../db/utils.js'
 import { ALLOWED_CATEGORIES } from '../lib/allowedCategories.js'
-import { buildJpegVariantUnderBudget } from '../lib/imageBudget.js'
+import { buildJpegVariantUnderBudget, MAX_DERIVED_IMAGE_BYTES } from '../lib/imageBudget.js'
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024
-// 派生图统一 ≤200KB（见 imageBudget.js）；keyPrefix 变更可使旧对象失效重建
-const PRESET_THUMB = { maxW: 720, maxH: 720, startQuality: 0.86, keyPrefix: 'thumb2' }
-const PRESET_PREVIEW = { maxW: 1600, maxH: 1600, startQuality: 0.82, keyPrefix: 'preview' }
+
+/** 与前端 clientImageDerivatives / preview PRESETS 一致；Worker 无 Canvas 时依赖浏览器 JPEG 直传 */
+const DERIVATIVE_SPECS = [
+  {
+    formKey: 'smalls',
+    r2Key: (id) => `small/${id}.jpg`,
+    dbColumn: 'small_key',
+    preset: { maxW: 400, maxH: 400, startQuality: 0.7, minEdge: 40 },
+  },
+  {
+    formKey: 'thumbs',
+    r2Key: (id) => `thumb2/${id}.jpg`,
+    dbColumn: 'thumb_key',
+    preset: { maxW: 720, maxH: 720, startQuality: 0.86, minEdge: 44 },
+  },
+  {
+    formKey: 'previews',
+    r2Key: (id) => `preview/${id}.jpg`,
+    dbColumn: 'preview_key',
+    preset: { maxW: 1600, maxH: 1600, startQuality: 0.82, minEdge: 48 },
+  },
+]
+
+async function putDerivativeJpeg(env, id, body, r2Key, dbColumn) {
+  await env.R2.put(r2Key, body, { httpMetadata: { contentType: 'image/jpeg' } })
+  await env.DB.prepare(`UPDATE evidence SET ${dbColumn} = ? WHERE id = ?`).bind(r2Key, id).run()
+}
 
 function getExtAndMime(file) {
   const name = String(file?.name || '').toLowerCase()
@@ -152,6 +176,7 @@ export async function onRequestPost(context) {
     const formData = await request.formData()
     const files = formData.getAll('files')
     // 派生图（仅用于展示缩略图/预览），不会影响 original 与 EXIF 读取
+    const smalls = formData.getAll('smalls')
     const thumbs = formData.getAll('thumbs')
     const previews = formData.getAll('previews')
     const category = String(formData.get('category') || '')
@@ -194,72 +219,42 @@ export async function onRequestPost(context) {
         exif.imageWidth, exif.imageHeight, originalKey, fileSpec.mime, size
       ).run()
 
-      // 写入预览图与缩略图（优先使用前端派生图；服务器不依赖图像变换能力）
+      // 派生图：优先浏览器生成的 JPEG（已 ≤200KB 则直存 R2，Worker 无需 Canvas）；否则尝试服务端生成
       try {
-        const thumbKey = `${PRESET_THUMB.keyPrefix}/${id}.jpg`
-        const previewKey = `${PRESET_PREVIEW.keyPrefix}/${id}.jpg`
-        
-        const clientThumbFile = thumbs?.[i]
-        const clientPreviewFile = previews?.[i]
-        let needThumb = !clientThumbFile
-        let needPreview = !clientPreviewFile
+        const partArrays = { smalls, thumbs, previews }
 
-        // 1) 前端若提供派生图，仍经服务器压到 ≤200KB；失败则回退为原图生成
-        if (clientThumbFile) {
-          try {
-            const raw = await clientThumbFile.arrayBuffer()
-            const thumbBytes = await buildJpegVariantUnderBudget(raw, {
-              maxW: PRESET_THUMB.maxW,
-              maxH: PRESET_THUMB.maxH,
-              startQuality: PRESET_THUMB.startQuality,
-            })
-            await env.R2.put(thumbKey, thumbBytes, { httpMetadata: { contentType: 'image/jpeg' } })
-            await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(thumbKey, id).run()
-          } catch {
-            needThumb = true
-          }
-        }
-        if (clientPreviewFile) {
-          try {
-            const raw = await clientPreviewFile.arrayBuffer()
-            const previewBytes = await buildJpegVariantUnderBudget(raw, {
-              maxW: PRESET_PREVIEW.maxW,
-              maxH: PRESET_PREVIEW.maxH,
-              startQuality: PRESET_PREVIEW.startQuality,
-            })
-            await env.R2.put(previewKey, previewBytes, { httpMetadata: { contentType: 'image/jpeg' } })
-            await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(previewKey, id).run()
-          } catch {
-            needPreview = true
-          }
-        }
+        for (const spec of DERIVATIVE_SPECS) {
+          const clientFile = partArrays[spec.formKey]?.[i]
+          const key = spec.r2Key(id)
+          let done = false
 
-        // 2) 缺少派生图或前端处理失败时由服务器从原图生成
-        if (needThumb || needPreview) {
-          const [thumbBytes, previewBytes] = await Promise.all([
-            needThumb
-              ? buildJpegVariantUnderBudget(bytes, {
-                  maxW: PRESET_THUMB.maxW,
-                  maxH: PRESET_THUMB.maxH,
-                  startQuality: PRESET_THUMB.startQuality,
-                })
-              : Promise.resolve(null),
-            needPreview
-              ? buildJpegVariantUnderBudget(bytes, {
-                  maxW: PRESET_PREVIEW.maxW,
-                  maxH: PRESET_PREVIEW.maxH,
-                  startQuality: PRESET_PREVIEW.startQuality,
-                })
-              : Promise.resolve(null),
-          ])
-
-          if (thumbBytes) {
-            await env.R2.put(thumbKey, thumbBytes, { httpMetadata: { contentType: 'image/jpeg' } })
-            await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(thumbKey, id).run()
+          if (clientFile) {
+            try {
+              const raw = await clientFile.arrayBuffer()
+              if (raw.byteLength > 0 && raw.byteLength <= MAX_DERIVED_IMAGE_BYTES) {
+                await putDerivativeJpeg(env, id, raw, key, spec.dbColumn)
+                done = true
+              } else if (raw.byteLength > 0) {
+                try {
+                  const out = await buildJpegVariantUnderBudget(raw, spec.preset)
+                  await putDerivativeJpeg(env, id, out, key, spec.dbColumn)
+                  done = true
+                } catch {
+                  /* 再试原图 */
+                }
+              }
+            } catch {
+              /* 再试原图 */
+            }
           }
-          if (previewBytes) {
-            await env.R2.put(previewKey, previewBytes, { httpMetadata: { contentType: 'image/jpeg' } })
-            await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(previewKey, id).run()
+
+          if (!done) {
+            try {
+              const out = await buildJpegVariantUnderBudget(bytes, spec.preset)
+              await putDerivativeJpeg(env, id, out, key, spec.dbColumn)
+            } catch {
+              // Pages Worker 常无图像 API 且前端未带图时跳过；仅 original 可用
+            }
           }
         }
       } catch (previewErr) {

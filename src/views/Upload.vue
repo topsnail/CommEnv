@@ -288,6 +288,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { categories, APP_CONFIG, MESSAGES } from '@/constants'
 import { evidenceApi } from '@/api'
+import { buildDerivativesForUpload } from '@/utils/clientImageDerivatives'
 
 const router = useRouter()
 
@@ -395,10 +396,24 @@ const confirmAndUpload = async () => {
     
     for (let i = 0; i < selectedFiles.value.length; i++) {
       const file = selectedFiles.value[i]
+      uploadStatusText.value = `正在压缩图片 ${i + 1}/${selectedFiles.value.length}: ${file.name}`
+      let small
+      let thumb
+      let preview
+      try {
+        ;({ small, thumb, preview } = await buildDerivativesForUpload(file))
+      } catch (compressErr) {
+        console.error(compressErr)
+        uploadError.value = '无法压缩该图片，请换一张 JPG/PNG 或使用较小图片重试'
+        throw compressErr
+      }
+
       uploadStatusText.value = `正在上传 ${i + 1}/${selectedFiles.value.length}: ${file.name}`
-      
       const formData = new FormData()
       formData.append('files', file)
+      formData.append('smalls', small, 'small.jpg')
+      formData.append('thumbs', thumb, 'thumb.jpg')
+      formData.append('previews', preview, 'preview.jpg')
       formData.append('category', category)
       if (desc) formData.append('description', desc)
       
