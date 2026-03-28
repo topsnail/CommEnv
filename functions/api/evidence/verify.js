@@ -41,6 +41,7 @@ export async function onRequestPost(context) {
     const computed = await sha256Hex(buf)
     const match = computed === row.hash_sha256
 
+    // 不返回 original_key，避免暴露 R2 路径；原图仅管理后台「打包下载」流出
     return json({
       success: true,
       evidenceId,
@@ -48,7 +49,6 @@ export async function onRequestPost(context) {
       storedSha256: row.hash_sha256 || '',
       match,
       fileMimeType: row.original_mime || '',
-      fileKey: row.original_key || '',
     })
   } catch (e) {
     console.error('Verify error:', e)

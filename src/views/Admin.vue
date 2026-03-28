@@ -86,7 +86,7 @@
                 打包下载{{ selectedIds.length > 0 ? `（已选${selectedIds.length}）` : '（全部）' }}
               </button>
               <span class="text-sm text-gray-500 flex items-center">
-                👈为保证流畅度，看到的图片都是经过压缩的，仅通过次数可以下载原图！
+                👈为保证流畅度，界面中均为 ≤200KB 压缩图；原图仅可通过「打包下载」获取。
               </span>
             </div>
           </div>
@@ -225,7 +225,7 @@
                 class="w-full h-full object-cover"
                 loading="lazy"
                 decoding="async"
-                @error="onImageError"
+                @error="onDetailImageError"
               />
             </div>
             
@@ -593,9 +593,19 @@ const mediaUrl = (url) => {
   return url
 }
 
-const onImageError = (event) => {
-  event.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%" y="50%" font-family="Arial" font-size="16" fill="%239ca3af" text-anchor="middle" dominant-baseline="middle"%3E图片加载失败%3C/text%3E%3C/svg%3E'
-  event.target.alt = '图片加载失败'
+/** 详情弹窗：先中等图 preview，失败再试列表小图 url（均为 ≤200KB 派生图，非原图） */
+const onDetailImageError = (event) => {
+  const ev = selectedEvidence.value
+  const img = event?.target
+  if (!img || !ev) return
+  if (img.dataset.fallbackSmall !== '1' && ev.url && ev.previewUrl && ev.url !== ev.previewUrl) {
+    img.dataset.fallbackSmall = '1'
+    img.src = mediaUrl(ev.url)
+    return
+  }
+  img.src =
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%" y="50%" font-family="Arial" font-size="16" fill="%239ca3af" text-anchor="middle" dominant-baseline="middle"%3E图片加载失败%3C/text%3E%3C/svg%3E'
+  img.alt = '图片加载失败'
 }
 
 const loadStats = async () => {

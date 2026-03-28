@@ -37,8 +37,9 @@ export async function onRequestGet(context) {
       description: row.description || '',
       timestamp: row.upload_time,
       hash: row.hash_sha256,
-      // 与 evidence/list 一致：中等图 preview；缩略图 small（均 ≤200KB，见 imageBudget）
-      url: `/api/preview/${row.id}?kind=preview`,
+      // 与 evidence/list 一致：列表/缩略 kind=small；放大 kind=preview（均 ≤200KB，见 imageBudget）
+      url: `/api/preview/${row.id}?kind=small`,
+      previewUrl: `/api/preview/${row.id}?kind=preview`,
       thumbUrl: `/api/preview/${row.id}?kind=small`,
       exif: {
         make: row.make || null,

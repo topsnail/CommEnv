@@ -63,6 +63,10 @@ async function responseFromCached(cached, extraHeaders = {}) {
   Object.entries(extraHeaders).forEach(([k, v]) => headers.set(k, v))
   try {
     const buf = await cached.arrayBuffer()
+    // 全站展示仅用 ≤200KB 派生图；超标则换候选 key，不对外返回大图
+    if (buf.byteLength > MAX_DERIVED_IMAGE_BYTES) {
+      throw new Error('DERIVATIVE_OVER_BUDGET')
+    }
     return new Response(buf, { headers })
   } catch {
     if (cached.body) return new Response(cached.body, { headers })
@@ -144,8 +148,6 @@ export async function onRequestGet(context) {
 
     const conventionalKey = conventionalDerivativeKey(kind, id)
     const keyCandidates = buildCacheKeyCandidates(kind, id, row)
-    
-    console.log('Preview debug:', { id, kind, row, conventionalKey, keyCandidates })
 
     for (const keyCandidate of keyCandidates) {
       try {

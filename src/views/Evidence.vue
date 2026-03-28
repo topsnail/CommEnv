@@ -126,6 +126,7 @@
           class="max-w-full max-h-[75vh] object-contain"
           decoding="async"
           @load="onModalImgLoad"
+          @error="onModalImgError"
         />
         <div class="mt-3 w-full max-w-3xl bg-white/95 rounded-lg p-3 text-xs text-gray-700">
           <p><strong>EXIF拍摄时间：</strong>{{ formatExifTime(selectedImage?.exif?.datetimeOriginal) }}</p>
@@ -328,10 +329,20 @@ const onModalImgLoad = (e) => {
   }
 }
 
-// 列表缩略图如果由于服务端生成失败返回 503，会触发 onerror。
-// 这里降级到 preview（一般仍比原图小；若 preview 也失败，最终用户仍能看到兜底内容而不是空白）。
+/** 放大图优先 kind=preview；失败则降级 kind=small（均为 ≤200KB 派生图） */
+const onModalImgError = (e) => {
+  const img = e?.target
+  const ev = selectedImage.value
+  if (!img || !ev?.url) return
+  if (img.dataset.modalFallback === '1') return
+  if (String(img.src || '').includes('kind=preview') && ev.url !== (ev.previewUrl || '')) {
+    img.dataset.modalFallback = '1'
+    img.src = ev.url
+  }
+}
+
+// 列表为 kind=small（≤200KB）；失败则换 kind=preview（同为派生图）。均失败则占位，不加载原图。
 const onThumbError = (evidence, event) => {
-  console.log('Thumb error:', evidence, event)
   const next = evidence?.previewUrl
   if (!next) {
     // 没有预览 URL，显示占位符
