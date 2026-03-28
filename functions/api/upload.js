@@ -232,17 +232,9 @@ export async function onRequestPost(context) {
           if (clientFile) {
             try {
               const raw = await clientFile.arrayBuffer()
-              if (raw.byteLength > 0 && raw.byteLength <= MAX_DERIVED_IMAGE_BYTES) {
+              if (raw.byteLength > 0) {
                 await putDerivativeJpeg(env, id, raw, key, spec.dbColumn)
                 done = true
-              } else if (raw.byteLength > 0) {
-                try {
-                  const out = await buildJpegVariantUnderBudget(raw, spec.preset)
-                  await putDerivativeJpeg(env, id, out, key, spec.dbColumn)
-                  done = true
-                } catch {
-                  /* 再试原图 */
-                }
               }
             } catch {
               /* 再试原图 */

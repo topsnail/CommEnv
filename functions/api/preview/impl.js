@@ -144,6 +144,8 @@ export async function onRequestGet(context) {
 
     const conventionalKey = conventionalDerivativeKey(kind, id)
     const keyCandidates = buildCacheKeyCandidates(kind, id, row)
+    
+    console.log('Preview debug:', { id, kind, row, conventionalKey, keyCandidates })
 
     for (const keyCandidate of keyCandidates) {
       try {
