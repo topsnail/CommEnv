@@ -14,6 +14,33 @@ function conventionalDerivativeKey(kind, id) {
   return `${p.keyPrefix}/${id}.jpg`
 }
 
+/** 同一 id 下约定派生路径（仅 JPEG）；顺序按当前 kind 优先，避免 preview 请求误用 small */
+function conventionalDerivativeKeysForKind(kind, id) {
+  const s = `small/${id}.jpg`
+  const t = `thumb2/${id}.jpg`
+  const p = `preview/${id}.jpg`
+  if (kind === 'small') return [s, t, p]
+  if (kind === 'thumb') return [t, p, s]
+  return [p, t, s]
+}
+
+function buildCacheKeyCandidates(kind, id, row) {
+  const currentPrefix = `${PRESETS[kind].keyPrefix}/`
+  let primaryKeyRaw = null
+  if (kind === 'preview') primaryKeyRaw = row.preview_key
+  else if (kind === 'small') primaryKeyRaw = row.small_key
+  else primaryKeyRaw = row.thumb_key
+  const primaryKey = primaryKeyRaw && String(primaryKeyRaw).startsWith(currentPrefix) ? primaryKeyRaw : null
+  let secondaryKey = null
+  if (kind === 'thumb') secondaryKey = row.preview_key
+  else if (kind === 'small') secondaryKey = row.preview_key
+  else if (kind === 'preview') {
+    secondaryKey = row.thumb_key && String(row.thumb_key).startsWith('thumb2/') ? row.thumb_key : null
+  }
+  const conventional = conventionalDerivativeKeysForKind(kind, id)
+  return [...new Set([primaryKey, secondaryKey, ...conventional].filter(Boolean))]
+}
+
 const KIND_TO_DB_COLUMN = {
   preview: 'preview_key',
   small: 'small_key',
@@ -105,19 +132,8 @@ export async function onRequestGet(context) {
       }
     }
 
-    const currentPrefix = `${preset.keyPrefix}/`
-    let primaryKeyRaw = null
-    if (kind === 'preview') {
-      primaryKeyRaw = row.preview_key
-    } else if (kind === 'small') {
-      primaryKeyRaw = row.small_key
-    } else {
-      primaryKeyRaw = row.thumb_key
-    }
-    const primaryKey = primaryKeyRaw && String(primaryKeyRaw).startsWith(currentPrefix) ? primaryKeyRaw : null
-    const secondaryKey = kind === 'thumb' ? row.preview_key : kind === 'small' ? row.preview_key : null
     const conventionalKey = conventionalDerivativeKey(kind, id)
-    const keyCandidates = [...new Set([primaryKey, secondaryKey, conventionalKey].filter(Boolean))]
+    const keyCandidates = buildCacheKeyCandidates(kind, id, row)
 
     for (const keyCandidate of keyCandidates) {
       try {
@@ -130,7 +146,10 @@ export async function onRequestGet(context) {
         if (kind === 'thumb' && row.preview_key && String(keyCandidate) === String(row.preview_key)) {
           extra['X-Preview-Fallback'] = 'preview-cached'
         }
-        if (String(keyCandidate) === conventionalKey) {
+        if (String(keyCandidate) !== conventionalKey && conventionalDerivativeKeysForKind(kind, id).includes(String(keyCandidate))) {
+          extra['X-Preview-Fallback'] = 'derivative-cross'
+          extra['X-Preview-Source'] = 'r2-conventional'
+        } else if (String(keyCandidate) === conventionalKey) {
           extra['X-Preview-Source'] = 'r2-conventional'
         }
         const dbCol = KIND_TO_DB_COLUMN[kind]
@@ -178,6 +197,21 @@ export async function onRequestGet(context) {
       contentType = built.contentType
     } catch (err) {
       console.error('preview generate:', id, kind, err)
+      // Worker 无 Canvas 时生成必失败：尽量回退原图（重新 get，因上面已消费过 body）
+      try {
+        const origFallback = await env.R2.get(String(row.original_key || ''))
+        if (origFallback) {
+          const ct = String(origFallback.httpMetadata?.contentType || '')
+          if (ct.startsWith('image/')) {
+            return responseFromCached(origFallback, {
+              'X-Preview-Fallback': 'original',
+              'Cache-Control': 'public, max-age=3600',
+            })
+          }
+        }
+      } catch (fallbackErr) {
+        console.error('preview original fallback:', id, fallbackErr)
+      }
       return previewUnavailableResponse()
     }
 
