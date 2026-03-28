@@ -74,7 +74,7 @@
           <div class="relative">
             <div class="aspect-video bg-gray-100">
               <img
-                :src="evidence.previewUrl || evidence.url"
+                :src="evidence.url"
                 :alt="evidence.description"
                 class="w-full h-full object-cover cursor-pointer"
                 loading="lazy"
@@ -131,6 +131,12 @@
           <p><strong>EXIF拍摄时间：</strong>{{ formatExifTime(selectedImage?.exif?.datetimeOriginal) }}</p>
           <p><strong>设备型号：</strong>{{ formatDevice(selectedImage?.exif) }}</p>
           <p><strong>是否包含GPS：</strong>{{ formatGpsPresence(selectedImage?.exif) }}</p>
+          <button
+            @click="downloadOriginal(selectedImage)"
+            class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium"
+          >
+            下载原图
+          </button>
         </div>
       </div>
     </div>
@@ -325,6 +331,22 @@ const onModalImgLoad = (e) => {
   const h = Number(img?.naturalHeight)
   if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
     modalImgSize.value = { w, h }
+  }
+}
+
+const downloadOriginal = async (evidence) => {
+  try {
+    const response = await fetch(`/api/files/${evidence.id}.jpg`)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `证据_${evidence.id.slice(-8)}.jpg`
+    a.click()
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('下载原图失败:', error)
+    alert('下载原图失败，请重试')
   }
 }
 

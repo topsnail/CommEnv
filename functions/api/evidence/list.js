@@ -52,7 +52,7 @@ async function getEvidenceList(env, category, page, pageSize) {
     description: r.description || '',
     timestamp: r.upload_time,
     hash: r.hash_sha256,
-    url: `/api/preview/${r.id}?kind=thumb`,
+    url: `/api/preview/${r.id}?kind=small`,
     previewUrl: `/api/preview/${r.id}?kind=preview`,
     exif: {
       make: r.make || null,
@@ -60,8 +60,7 @@ async function getEvidenceList(env, category, page, pageSize) {
       datetimeOriginal: r.datetime_original || null,
       imageWidth: Number.isFinite(Number(r.image_width)) ? Number(r.image_width) : null,
       imageHeight: Number.isFinite(Number(r.image_height)) ? Number(r.image_height) : null,
-      hasGps:
-        Number.isFinite(Number(r.gps_lat)) && Number.isFinite(Number(r.gps_lon)),
+      hasGps: Number.isFinite(Number(r.gps_lat)) && Number.isFinite(Number(r.gps_lon)),
       gps: (Number.isFinite(Number(r.gps_lat)) && Number.isFinite(Number(r.gps_lon)))
         ? { lat: Number(r.gps_lat), lon: Number(r.gps_lon) }
         : null,

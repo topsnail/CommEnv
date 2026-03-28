@@ -85,6 +85,9 @@
                 </svg>
                 打包下载{{ selectedIds.length > 0 ? `（已选${selectedIds.length}）` : '（全部）' }}
               </button>
+              <span class="text-sm text-gray-500 flex items-center">
+                👈原图通过此处下载！
+              </span>
             </div>
           </div>
         </div>
@@ -217,7 +220,7 @@
           <div v-if="selectedEvidence" class="space-y-4">
             <div class="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
               <img
-                :src="mediaUrl(selectedEvidence.previewUrl || selectedEvidence.url)"
+                :src="mediaUrl(selectedEvidence.previewUrl)"
                 :alt="selectedEvidence.description"
                 class="w-full h-full object-cover"
                 loading="lazy"
@@ -244,7 +247,7 @@
                 <p class="font-medium">{{ formatDate(selectedEvidence.exif?.datetimeOriginal || selectedEvidence.timestamp) }}</p>
               </div>
               <div>
-                <p class="text-sm text-gray-500">GPS（EXIF，保留3位小数）</p>
+                <p class="text-sm text-gray-500">GPS（来自图片EXIF信息）</p>
                 <p class="font-medium">{{ formatGps(selectedEvidence.exif?.gps) }}</p>
               </div>
               <div>

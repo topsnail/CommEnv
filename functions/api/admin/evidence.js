@@ -69,8 +69,9 @@ async function getAdminEvidenceList(env, category, page, pageSize) {
     description: r.description || '',
     timestamp: r.upload_time,
     uploadedAt: r.upload_time,
-    url: `/api/preview/${r.id}?kind=preview`,
-    thumbUrl: `/api/preview/${r.id}?kind=thumb`,
+    url: `/api/preview/${r.id}?kind=small`,
+    thumbUrl: `/api/preview/${r.id}?kind=small`,
+    previewUrl: `/api/preview/${r.id}?kind=preview`,
     hash: r.hash_sha256,
     originalSize: r.original_size,
     status: r.status || 'normal',
@@ -119,9 +120,15 @@ function normalizeExif(exif, row = {}) {
   const lon = Number.isFinite(rowLon) ? rowLon : Number(out.GPSLongitude ?? out.longitude ?? out.lon)
   if (Number.isFinite(lat) && Number.isFinite(lon)) {
     out.gps = { lat, lon }
+    out.hasGps = true
   } else {
     out.gps = null
+    out.hasGps = false
   }
   out.datetimeOriginal = out.DateTimeOriginal || out.CreateDate || out.datetimeOriginal || null
+  out.make = out.Make || out.make || null
+  out.model = out.Model || out.model || null
+  out.imageWidth = Number(out.ImageWidth || out.imageWidth || 0) || null
+  out.imageHeight = Number(out.ImageHeight || out.imageHeight || 0) || null
   return out
 }

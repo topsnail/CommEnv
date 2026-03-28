@@ -2,6 +2,8 @@ import { ensureSchema } from '../../db/schema.js'
 import { requireAdminSession } from '../../lib/adminAuth.js'
 
 const PRESETS = {
+  // 小缩略图：用于列表展示，控制在200KB以下
+  small: { maxW: 400, maxH: 400, quality: 0.7, keyPrefix: 'small' },
   // 提高清晰度：缩略图尺寸与质量上调；同时更换 keyPrefix 以便旧缩略图自动失效重建
   thumb: { maxW: 720, maxH: 720, quality: 0.86, keyPrefix: 'thumb2' },
   preview: { maxW: 1600, maxH: 1600, quality: 0.82, keyPrefix: 'preview' },
@@ -41,7 +43,8 @@ export async function onRequestGet(context) {
       return new Response('证据不存在', { status: 404 })
     }
 
-    const kind = new URL(request.url).searchParams.get('kind') === 'preview' ? 'preview' : 'thumb'
+    const kindParam = new URL(request.url).searchParams.get('kind')
+    const kind = kindParam === 'preview' ? 'preview' : (kindParam === 'small' ? 'small' : 'thumb')
     const preset = PRESETS[kind]
     const acceptHeader = request.headers.get('accept') || ''
     const supportsWebP = acceptHeader.includes('image/webp')
@@ -49,7 +52,7 @@ export async function onRequestGet(context) {
     await ensureSchema(env)
 
     const row = await env.DB.prepare(
-      'SELECT status, original_key, preview_key, thumb_key FROM evidence WHERE id = ? LIMIT 1'
+      'SELECT status, original_key, preview_key, thumb_key, small_key FROM evidence WHERE id = ? LIMIT 1'
     ).bind(id).first()
     if (!row) return new Response('证据不存在', { status: 404 })
 
@@ -60,9 +63,16 @@ export async function onRequestGet(context) {
 
     // 仅信任与当前预设匹配的 key，避免一直命中旧的低清缩略图
     const currentPrefix = `${preset.keyPrefix}/`
-    const primaryKeyRaw = kind === 'preview' ? row.preview_key : row.thumb_key
+    let primaryKeyRaw = null
+    if (kind === 'preview') {
+      primaryKeyRaw = row.preview_key
+    } else if (kind === 'small') {
+      primaryKeyRaw = row.small_key
+    } else {
+      primaryKeyRaw = row.thumb_key
+    }
     const primaryKey = (primaryKeyRaw && String(primaryKeyRaw).startsWith(currentPrefix)) ? primaryKeyRaw : null
-    const secondaryKey = kind === 'thumb' ? row.preview_key : null
+    const secondaryKey = kind === 'thumb' ? row.preview_key : (kind === 'small' ? row.preview_key : null)
     const selectedKey = [primaryKey, secondaryKey].find((key) => key)
     if (selectedKey) {
       const cached = await env.R2.get(String(selectedKey))
@@ -92,6 +102,8 @@ export async function onRequestGet(context) {
       await env.R2.put(variantKey, variantBytes, { httpMetadata: { contentType: format === 'webp' ? 'image/webp' : 'image/jpeg' } })
       if (kind === 'preview') {
         await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(variantKey, id).run()
+      } else if (kind === 'small') {
+        await env.DB.prepare('UPDATE evidence SET small_key = ? WHERE id = ?').bind(variantKey, id).run()
       } else {
         await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(variantKey, id).run()
       }

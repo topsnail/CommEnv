@@ -6,7 +6,7 @@ export async function ensureSchema(env) {
 
   // 证据元数据（不存 IP、不存个人信息；status 仅用于隐藏/恢复）
   // original_key: R2 原图对象 key
-  // preview_key/thumb_key: R2 预览/缩略对象 key（非原图，可重建）
+  // preview_key/thumb_key/small_key: R2 预览/缩略对象 key（非原图，可重建）
   await db.prepare(
     `CREATE TABLE IF NOT EXISTS evidence (
       id TEXT PRIMARY KEY,
@@ -27,7 +27,8 @@ export async function ensureSchema(env) {
       original_mime TEXT NOT NULL,
       original_size INTEGER NOT NULL,
       preview_key TEXT NULL,
-      thumb_key TEXT NULL
+      thumb_key TEXT NULL,
+      small_key TEXT NULL
     )`
   ).run()
   await db.prepare('CREATE INDEX IF NOT EXISTS idx_evidence_upload_time ON evidence(upload_time)').run()
