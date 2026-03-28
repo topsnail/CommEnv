@@ -1,6 +1,6 @@
 import * as exifr from 'exifr'
 import { ensureSchema } from '../db/schema.js'
-import { json, newId, roundGps3, sha256Hex } from '../db/utils.js'
+import { json, newId, roundGps2, sha256Hex } from '../db/utils.js'
 
 const ALLOWED_CATEGORIES = new Set([
   'CAT01', 'CAT02', 'CAT03', 'CAT04', 'CAT05',
@@ -31,8 +31,8 @@ async function parseExif(buffer) {
     const parsed = await exifr.parse(buffer)
     const exif = parsed && typeof parsed === 'object' ? parsed : {}
     const { lat: gpsLatRaw, lon: gpsLonRaw } = extractGpsDecimal(exif)
-    const gpsLat = roundGps3(gpsLatRaw)
-    const gpsLon = roundGps3(gpsLonRaw)
+    const gpsLat = roundGps2(gpsLatRaw)
+    const gpsLon = roundGps2(gpsLonRaw)
 
     const datetimeOriginal = normalizeExifDateTimeOriginal(exif.DateTimeOriginal)
 

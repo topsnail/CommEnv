@@ -432,7 +432,7 @@ const formatGps = (gps) => {
   const lat = Number(gps.lat)
   const lon = Number(gps.lon)
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '-'
-  return `${lat.toFixed(3)}, ${lon.toFixed(3)}`
+  return `${lat.toFixed(2)}, ${lon.toFixed(2)}`
 }
 
 const formatHashShort = (hash) => {

@@ -17,9 +17,9 @@ export async function sha256Hex(buffer) {
     .join('')
 }
 
-export function roundGps3(v) {
+export function roundGps2(v) {
   const n = Number(v)
   if (!Number.isFinite(n)) return null
-  return Math.round(n * 1000) / 1000
+  return Math.round(n * 100) / 100
 }
 
