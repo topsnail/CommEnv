@@ -1,5 +1,5 @@
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url)
     const { pathname } = url
 
@@ -80,7 +80,12 @@ export default {
     if (/^\/api\/preview\/[^/]+$/.test(pathname)) {
       const mod = await import('./api/preview/[id].js')
       const id = pathname.split('/').pop()
-      return mod.onRequestGet({ request, env, params: { id } })
+      return mod.onRequestGet({
+        request,
+        env,
+        params: { id },
+        waitUntil: ctx && typeof ctx.waitUntil === 'function' ? ctx.waitUntil.bind(ctx) : undefined,
+      })
     }
 
     return new Response('Not Found', { status: 404 })

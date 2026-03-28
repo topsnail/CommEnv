@@ -47,7 +47,8 @@ const KIND_TO_DB_COLUMN = {
   thumb: 'thumb_key',
 }
 
-function responseFromCached(cached, extraHeaders = {}) {
+/** 用 arrayBuffer 再组装 Response，避免部分环境下直接传 R2 body 流导致未捕获异常 → 外层 503 */
+async function responseFromCached(cached, extraHeaders = {}) {
   const headers = new Headers()
   try {
     cached.writeHttpMetadata(headers)
@@ -60,7 +61,13 @@ function responseFromCached(cached, extraHeaders = {}) {
   headers.set('Cache-Control', 'public, max-age=604800')
   headers.set('X-Content-Type-Options', 'nosniff')
   Object.entries(extraHeaders).forEach(([k, v]) => headers.set(k, v))
-  return new Response(cached.body, { headers })
+  try {
+    const buf = await cached.arrayBuffer()
+    return new Response(buf, { headers })
+  } catch {
+    if (cached.body) return new Response(cached.body, { headers })
+    throw new Error('R2 object has no body')
+  }
 }
 
 function previewUnavailableResponse() {
@@ -159,7 +166,7 @@ export async function onRequestGet(context) {
           if (typeof waitUntil === 'function') waitUntil(p)
           else void p
         }
-        return responseFromCached(cached, extra)
+        return await responseFromCached(cached, extra)
       } catch (cacheErr) {
         console.error('preview cache skip:', keyCandidate, cacheErr)
       }
@@ -201,10 +208,13 @@ export async function onRequestGet(context) {
         if (origFallback) {
           const ct = String(origFallback.httpMetadata?.contentType || '')
           const keyLower = String(row.original_key || '').toLowerCase()
+          const okPath = String(row.original_key || '').startsWith('original/')
           const looksImage =
-            ct.startsWith('image/') || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(keyLower)
+            ct.startsWith('image/') ||
+            /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(keyLower) ||
+            okPath
           if (looksImage) {
-            return responseFromCached(origFallback, {
+            return await responseFromCached(origFallback, {
               'X-Preview-Fallback': 'original',
               'Cache-Control': 'public, max-age=3600',
             })
