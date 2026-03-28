@@ -94,13 +94,6 @@
           <p class="mt-3 text-sm text-gray-600">加载中...</p>
         </div>
 
-        <!-- 操作消息 -->
-        <div v-if="operationMessage" class="mb-4" :class="operationSuccess ? 'bg-green-50 border-l-4 border-green-400' : 'bg-red-50 border-l-4 border-red-400'">
-          <div class="p-4 rounded-r-lg">
-            <p class="text-sm" :class="operationSuccess ? 'text-green-700' : 'text-red-700'">{{ operationMessage }}</p>
-          </div>
-        </div>
-
         <div v-else-if="filteredEvidence.length === 0" class="text-center py-10">
           <div class="text-5xl mb-3">📭</div>
           <p class="text-gray-600 text-base">暂无数据</p>
