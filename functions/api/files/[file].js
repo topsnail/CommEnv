@@ -2,8 +2,8 @@ import { ensureSchema } from '../../db/schema.js'
 import { requireAdminSession } from '../../lib/adminAuth.js'
 
 /**
- * 原图直链：仅管理员可用（需 Bearer）。公开访客请使用 /api/preview/...；
- * 批量原图请使用管理后台「打包下载」（/api/admin/download/all）。
+ * 原图直链：仅管理员可用（HttpOnly Cookie `admin_session`，与 requireAdminSession 一致）。
+ * 公开访客请使用 /api/preview/...；批量原图请用管理后台「打包下载」（/api/admin/download/all）。
  */
 export async function onRequestGet(context) {
   const { request, env, params } = context
