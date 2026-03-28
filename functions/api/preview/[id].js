@@ -139,9 +139,7 @@ export async function onRequestGet(context) {
       try {
         const cached = await env.R2.get(String(keyCandidate))
         if (!cached) continue
-        // 写入端目标为 ≤200KB；边界略超仍应展示，避免误判导致整链 503
-        const sz = cached.size
-        if (typeof sz === 'number' && sz > MAX_DERIVED_IMAGE_BYTES * 2) continue
+        // 不在此处按字节过滤：约定路径下的 JPEG 即使用户端略超 200KB 也应直接展示，避免误判整链 503
         const extra = {}
         if (kind === 'thumb' && row.preview_key && String(keyCandidate) === String(row.preview_key)) {
           extra['X-Preview-Fallback'] = 'preview-cached'
@@ -202,7 +200,10 @@ export async function onRequestGet(context) {
         const origFallback = await env.R2.get(String(row.original_key || ''))
         if (origFallback) {
           const ct = String(origFallback.httpMetadata?.contentType || '')
-          if (ct.startsWith('image/')) {
+          const keyLower = String(row.original_key || '').toLowerCase()
+          const looksImage =
+            ct.startsWith('image/') || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(keyLower)
+          if (looksImage) {
             return responseFromCached(origFallback, {
               'X-Preview-Fallback': 'original',
               'Cache-Control': 'public, max-age=3600',
