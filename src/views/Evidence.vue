@@ -331,9 +331,22 @@ const onModalImgLoad = (e) => {
 // 列表缩略图如果由于服务端生成失败返回 503，会触发 onerror。
 // 这里降级到 preview（一般仍比原图小；若 preview 也失败，最终用户仍能看到兜底内容而不是空白）。
 const onThumbError = (evidence, event) => {
+  console.log('Thumb error:', evidence, event)
   const next = evidence?.previewUrl
-  if (!next) return
-  if (evidence.url === next) return
+  if (!next) {
+    // 没有预览 URL，显示占位符
+    if (event?.target && typeof event.target === 'object' && 'src' in event.target) {
+      event.target.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="#f3f4f6"/><text x="200" y="150" font-size="14" text-anchor="middle" fill="#9ca3af">预览暂不可用</text></svg>`
+    }
+    return
+  }
+  if (evidence.url === next) {
+    // 所有预览图都失败了，显示占位符
+    if (event?.target && typeof event.target === 'object' && 'src' in event.target) {
+      event.target.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect width="400" height="300" fill="#f3f4f6"/><text x="200" y="150" font-size="14" text-anchor="middle" fill="#9ca3af">预览暂不可用</text></svg>`
+    }
+    return
+  }
   evidence.url = next
   if (event?.target && typeof event.target === 'object' && 'src' in event.target) {
     event.target.src = next
