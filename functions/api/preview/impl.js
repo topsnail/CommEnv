@@ -204,26 +204,6 @@ export async function onRequestGet(context) {
       contentType = built.contentType
     } catch (err) {
       console.error('preview generate:', id, kind, err)
-      try {
-        const origFallback = await env.R2.get(String(row.original_key || ''))
-        if (origFallback) {
-          const ct = String(origFallback.httpMetadata?.contentType || '')
-          const keyLower = String(row.original_key || '').toLowerCase()
-          const okPath = String(row.original_key || '').startsWith('original/')
-          const looksImage =
-            ct.startsWith('image/') ||
-            /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(keyLower) ||
-            okPath
-          if (looksImage) {
-            return await responseFromCached(origFallback, {
-              'X-Preview-Fallback': 'original',
-              'Cache-Control': 'public, max-age=3600',
-            })
-          }
-        }
-      } catch (fallbackErr) {
-        console.error('preview original fallback:', id, fallbackErr)
-      }
       return previewUnavailableResponse()
     }
 
