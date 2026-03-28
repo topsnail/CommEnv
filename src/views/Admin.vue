@@ -604,28 +604,9 @@ const onImageError = (event) => {
 
 const loadStats = async () => {
   try {
-    // 模拟数据 - 实际项目中应该从 API 获取
-    categoryStats.value = [
-      { category: 'CAT01', count: 25 },
-      { category: 'CAT02', count: 18 },
-      { category: 'CAT03', count: 15 },
-      { category: 'CAT04', count: 12 },
-      { category: 'CAT05', count: 10 },
-      { category: 'CAT06', count: 8 },
-      { category: 'CAT07', count: 6 },
-      { category: 'CAT08', count: 4 }
-    ]
-    
-    // 生成最近7天的趋势数据
-    const today = new Date()
-    trendStats.value = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today)
-      date.setDate(date.getDate() - 6 + i)
-      return {
-        date: date.toISOString().split('T')[0],
-        count: Math.floor(Math.random() * 10) + 5
-      }
-    })
+    const response = await adminApi.stats()
+    categoryStats.value = response.categoryStats || []
+    trendStats.value = response.trendStats || []
   } catch (error) {
     console.error('加载统计数据失败:', error)
   }

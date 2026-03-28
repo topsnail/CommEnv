@@ -155,11 +155,14 @@
           <button @click="goToPhotoGuide" class="text-gray-500 hover:text-gray-700 underline text-xs">
             拍照取证规范
           </button>
+          <button @click="goToTutorial" class="text-gray-500 hover:text-gray-700 underline text-xs">
+            使用说明
+          </button>
           <button @click="goToLegal" class="text-gray-500 hover:text-gray-700 underline text-xs">
             法律声明与用户协议
           </button>
-          <button @click="goToTutorial" class="text-gray-500 hover:text-gray-700 underline text-xs">
-            使用说明
+          <button @click="goToAdmin" class="text-gray-500 hover:text-gray-700 underline text-xs">
+            后台管理
           </button>          
         </div>
         
@@ -207,5 +210,9 @@ const goToTutorial = () => {
 
 const goToPhotoGuide = () => {
   router.push('/photo-guide')
+}
+
+const goToAdmin = () => {
+  router.push('/admin')
 }
 </script>

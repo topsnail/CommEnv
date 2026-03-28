@@ -135,8 +135,9 @@ export const adminApi = {
     throw new Error('留言功能已移除')
   },
 
-  hideComment: async (id) => {
-    throw new Error('留言功能已移除')
+  stats: async (params) => {
+    const response = await api.get('/admin/stats', { params })
+    return response.data
   }
 }
 

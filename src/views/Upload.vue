@@ -142,61 +142,77 @@
         ></textarea>
       </div>
 
-      <!-- 合规确认区域（嵌入式） -->
-      <div v-if="showComplianceSection" class="bg-blue-50 border border-blue-200 rounded-xl p-4 section-gap">
-        <h3 class="text-base font-bold text-blue-800 mb-3 flex items-center gap-2">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-          </svg>
-          上传前确认
-        </h3>
-        <div class="space-y-2 text-sm text-gray-700 mb-4">
-          <p>请确认您上传的内容符合以下要求：</p>
-          <ul class="list-disc list-inside space-y-1 text-gray-600">
-            <li>拍摄的是小区公共环境问题</li>
-            <li>不包含住户室内、门窗内场景</li>
-            <li>不包含清晰可辨识的人脸</li>
-            <li>不包含清晰可辨识的车牌</li>
-            <li>不涉及个人隐私信息</li>
-          </ul>
-        </div>
-        <label class="flex items-start gap-2 mb-4 cursor-pointer">
-          <input
-            type="checkbox"
-            v-model="complianceChecked"
-            class="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-          />
-          <span class="text-sm text-gray-700">我已确认以上内容符合要求</span>
-        </label>
-        <div class="flex gap-3">
-          <button
-            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg text-sm font-medium"
-            @click="closeComplianceSection"
-          >
-            取消
-          </button>
-          <button
-            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="!complianceChecked || uploading"
-            @click="confirmAndUpload"
-          >
-            <span v-if="uploading">
-              <span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1"></span>
-              上传中...
-            </span>
-            <span v-else>确认上传 {{ selectedFiles.length > 0 ? `(${selectedFiles.length}个文件)` : '' }}</span>
-          </button>
+      <!-- 合规确认弹窗 -->
+      <div v-if="showComplianceSection" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div class="p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+              上传前确认
+            </h3>
+            <div class="space-y-3 text-sm text-gray-700 mb-4">
+              <p class="font-medium">请确认您上传的内容符合以下要求：</p>
+              <ul class="list-disc list-inside space-y-2 text-gray-600">
+                <li>拍摄的是小区公共环境问题</li>
+                <li>不包含住户室内、门窗内场景</li>
+                <li>不包含清晰可辨识的人脸</li>
+                <li>不包含清晰可辨识的车牌</li>
+                <li>不涉及个人隐私信息</li>
+              </ul>
+            </div>
+            <label class="flex items-start gap-2 mb-4 cursor-pointer">
+              <input
+                type="checkbox"
+                v-model="complianceChecked"
+                class="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <span class="text-sm text-gray-700">我已确认以上内容符合要求</span>
+            </label>
+            <div class="flex gap-3">
+              <button
+                class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2.5 rounded-lg text-sm font-medium"
+                @click="closeComplianceSection"
+              >
+                取消
+              </button>
+              <button
+                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="!complianceChecked || uploading"
+                @click="confirmAndUpload"
+              >
+                <span v-if="uploading">
+                  <span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1"></span>
+                  上传中...
+                </span>
+                <span v-else>确认上传 {{ selectedFiles.length > 0 ? `(${selectedFiles.length}个文件)` : '' }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 提示信息 -->
-      <div v-if="uploadTip" class="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg mb-3">
-        <p class="text-sm text-amber-700 flex items-center gap-2">
-          <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-          </svg>
-          {{ uploadTip }}
-        </p>
+      <!-- 提示信息弹窗 -->
+      <div v-if="uploadTip" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full">
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="bg-amber-100 rounded-full p-2">
+                <svg class="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <p class="text-sm text-gray-700 font-medium">{{ uploadTip }}</p>
+            </div>
+            <button
+              @click="uploadTip = ''"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium"
+            >
+              我知道了
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 默认上传按钮 -->
@@ -361,7 +377,7 @@ const confirmAndUpload = async () => {
       uploadStatusText.value = `正在上传 ${i + 1}/${selectedFiles.value.length}: ${file.name}`
       
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('files', file)
       formData.append('category', category)
       if (desc) formData.append('description', desc)
       
