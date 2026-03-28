@@ -250,10 +250,28 @@
         </div>
       </div>
 
-      <div v-if="uploadSuccess" class="mt-4 bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
-        <p class="text-sm text-green-700">
-          <strong>上传成功！</strong>为避免上传涉黄、暴力、隐私等不合规图片，图片将有管理员通过审核后显示。
-        </p>
+      <!-- 上传成功弹窗 -->
+      <div v-if="uploadSuccess" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full">
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="bg-green-100 rounded-full p-2">
+                <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <p class="text-sm text-gray-700 font-medium">
+                <strong>上传成功！</strong>为避免上传涉黄、暴力、隐私等不合规图片，图片将有管理员通过审核后显示。
+              </p>
+            </div>
+            <button
+              @click="goToHome"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium"
+            >
+              确定
+            </button>
+          </div>
+        </div>
       </div>
 
       <div v-if="uploadError" class="mt-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
@@ -362,6 +380,9 @@ const closeComplianceSection = () => {
 const confirmAndUpload = async () => {
   if (!complianceChecked.value || !canUpload.value) return
   
+  // 上传开始时关闭合规确认弹窗
+  closeComplianceSection()
+  
   uploading.value = true
   uploadProgress.value = 0
   uploadStatusText.value = '准备上传...'
@@ -392,7 +413,6 @@ const confirmAndUpload = async () => {
     selectedFiles.value = []
     selectedCategory.value = ''
     description.value = ''
-    closeComplianceSection()
   } catch (error) {
     console.error('上传失败:', error)
     uploadError.value = error.response?.data?.error || '上传失败，请重试'
@@ -404,6 +424,10 @@ const confirmAndUpload = async () => {
 }
 
 const goBack = () => {
+  router.push('/')
+}
+
+const goToHome = () => {
   router.push('/')
 }
 </script>
