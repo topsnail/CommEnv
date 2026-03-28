@@ -37,7 +37,7 @@ export async function onRequestGet(context) {
       description: row.description || '',
       timestamp: row.upload_time,
       hash: row.hash_sha256,
-      // 与 evidence/list 一致：列表/缩略 kind=small；放大 kind=preview（派生图，非原图）
+      // 与 evidence/list 一致：url / previewUrl 均指向 /api/preview（直出 R2 original，不压缩）
       url: `/api/preview/${row.id}?kind=small`,
       previewUrl: `/api/preview/${row.id}?kind=preview`,
       thumbUrl: `/api/preview/${row.id}?kind=small`,

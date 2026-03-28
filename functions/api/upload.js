@@ -2,36 +2,8 @@ import * as exifr from 'exifr'
 import { ensureSchema } from '../db/schema.js'
 import { json, newId, roundGps2, sha256Hex } from '../db/utils.js'
 import { ALLOWED_CATEGORIES } from '../lib/allowedCategories.js'
-import { buildJpegVariantUnderBudget } from '../lib/imageBudget.js'
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024
-
-/** 与前端 clientImageDerivatives / preview PRESETS 一致；Worker 无 Canvas 时依赖浏览器 JPEG 直传 */
-const DERIVATIVE_SPECS = [
-  {
-    formKey: 'smalls',
-    r2Key: (id) => `small/${id}.jpg`,
-    dbColumn: 'small_key',
-    preset: { maxW: 400, maxH: 400, startQuality: 0.7, minEdge: 40 },
-  },
-  {
-    formKey: 'thumbs',
-    r2Key: (id) => `thumb2/${id}.jpg`,
-    dbColumn: 'thumb_key',
-    preset: { maxW: 720, maxH: 720, startQuality: 0.86, minEdge: 44 },
-  },
-  {
-    formKey: 'previews',
-    r2Key: (id) => `preview/${id}.jpg`,
-    dbColumn: 'preview_key',
-    preset: { maxW: 1600, maxH: 1600, startQuality: 0.82, minEdge: 48 },
-  },
-]
-
-async function putDerivativeJpeg(env, id, body, r2Key, dbColumn) {
-  await env.R2.put(r2Key, body, { httpMetadata: { contentType: 'image/jpeg' } })
-  await env.DB.prepare(`UPDATE evidence SET ${dbColumn} = ? WHERE id = ?`).bind(r2Key, id).run()
-}
 
 function getExtAndMime(file) {
   const name = String(file?.name || '').toLowerCase()
@@ -175,10 +147,6 @@ export async function onRequestPost(context) {
     await ensureSchema(env)
     const formData = await request.formData()
     const files = formData.getAll('files')
-    // 派生图（仅用于展示缩略图/预览），不会影响 original 与 EXIF 读取
-    const smalls = formData.getAll('smalls')
-    const thumbs = formData.getAll('thumbs')
-    const previews = formData.getAll('previews')
     const category = String(formData.get('category') || '')
     const description = String(formData.get('description') || '')
 
@@ -220,44 +188,6 @@ export async function onRequestPost(context) {
         exif.imageWidth, exif.imageHeight, originalKey, fileSpec.mime, size
       ).run()
 
-      // 派生图：优先浏览器生成的 JPEG（直存 R2）；否则尝试服务端生成
-      try {
-        const partArrays = { smalls, thumbs, previews }
-
-        for (const spec of DERIVATIVE_SPECS) {
-          const clientFile = partArrays[spec.formKey]?.[i]
-          const key = spec.r2Key(id)
-          let done = false
-
-          if (clientFile) {
-            try {
-              const raw = await clientFile.arrayBuffer()
-              if (raw.byteLength > 0) {
-                await putDerivativeJpeg(env, id, raw, key, spec.dbColumn)
-                done = true
-              }
-            } catch {
-              /* 再试原图 */
-            }
-          }
-
-          if (!done) {
-            try {
-              const out = await buildJpegVariantUnderBudget(bytes, spec.preset)
-              await putDerivativeJpeg(env, id, out, key, spec.dbColumn)
-            } catch {
-              // Pages Worker 常无图像 API 且前端未带图时跳过；仅 original 可用
-            }
-          }
-        }
-      } catch (previewErr) {
-        // 派生图失败不影响 original 入库与 EXIF 解析；前台会降级到 preview 或提示稍后重试
-        const pe = String(previewErr?.message || '')
-        if (!pe.includes('IMAGE_TRANSFORM_UNAVAILABLE') && !pe.includes('IMAGE_DECODE_FAILED')) {
-          console.warn('preview warmup failed:', id, previewErr)
-        }
-      }
-
       out.push({
         id,
         category,
@@ -265,7 +195,7 @@ export async function onRequestPost(context) {
         timestamp: uploadTime,
         upload_time: uploadTime,
         hash,
-        // 公开侧仅使用预览 URL；原图不通过此字段暴露（见 /api/files 鉴权）
+        // 公开侧通过 /api/preview 直出原文件；原图直链仍见 /api/files 鉴权
         url: `/api/preview/${id}?kind=small`,
         previewUrl: `/api/preview/${id}?kind=preview`,
       })
@@ -278,4 +208,3 @@ export async function onRequestPost(context) {
     return json({ error: '上传失败', message: detail || 'unknown error' }, 500)
   }
 }
-
