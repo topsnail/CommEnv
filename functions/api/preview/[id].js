@@ -10,7 +10,11 @@ const PRESETS = {
 
 function responseFromCached(cached, extraHeaders = {}) {
   const headers = new Headers()
-  cached.writeHttpMetadata(headers)
+  try {
+    cached.writeHttpMetadata(headers)
+  } catch {
+    headers.set('Content-Type', String(cached.httpMetadata?.contentType || 'image/jpeg'))
+  }
   if (!headers.get('Content-Type')) {
     headers.set('Content-Type', String(cached.httpMetadata?.contentType || 'application/octet-stream'))
   }
@@ -32,10 +36,24 @@ function previewUnavailableResponse() {
   })
 }
 
+/** 预览失败时统一 503，避免前端看到 500（原因写入日志） */
+function previewErrorResponse(logPrefix, err) {
+  console.error(logPrefix, err)
+  return previewUnavailableResponse()
+}
+
+export async function onRequest(context) {
+  const { request } = context
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return new Response('Method Not Allowed', { status: 405 })
+  }
+  return onRequestGet(context)
+}
+
 export async function onRequestGet(context) {
   const { request, env, params } = context
   try {
-    const id = String(params.id || '')
+    const id = String(params?.id || '')
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
       return new Response('证据不存在', { status: 404 })
     }
@@ -43,18 +61,36 @@ export async function onRequestGet(context) {
     const kindParam = new URL(request.url).searchParams.get('kind')
     const kind = kindParam === 'preview' ? 'preview' : kindParam === 'small' ? 'small' : 'thumb'
     const preset = PRESETS[kind]
-    await ensureSchema(env)
+    if (!preset) {
+      return new Response('参数 kind 无效', { status: 400 })
+    }
 
-    const row = await env.DB.prepare(
-      'SELECT status, original_key, preview_key, thumb_key, small_key FROM evidence WHERE id = ? LIMIT 1'
-    )
-      .bind(id)
-      .first()
+    try {
+      await ensureSchema(env)
+    } catch (schemaErr) {
+      return previewErrorResponse('preview ensureSchema:', schemaErr)
+    }
+
+    let row
+    try {
+      row = await env.DB.prepare(
+        'SELECT status, original_key, preview_key, thumb_key, small_key FROM evidence WHERE id = ? LIMIT 1'
+      )
+        .bind(id)
+        .first()
+    } catch (dbErr) {
+      return previewErrorResponse('preview DB:', dbErr)
+    }
+
     if (!row) return new Response('证据不存在', { status: 404 })
 
     if (row.status !== 'normal') {
-      const ok = await requireAdminSession(request, env)
-      if (!ok) return new Response('证据已隐藏', { status: 403 })
+      try {
+        const ok = await requireAdminSession(request, env)
+        if (!ok) return new Response('证据已隐藏', { status: 403 })
+      } catch (authErr) {
+        return previewErrorResponse('preview admin session:', authErr)
+      }
     }
 
     const currentPrefix = `${preset.keyPrefix}/`
@@ -85,9 +121,21 @@ export async function onRequestGet(context) {
       }
     }
 
-    const original = await env.R2.get(String(row.original_key || ''))
+    let original
+    try {
+      original = await env.R2.get(String(row.original_key || ''))
+    } catch (r2Err) {
+      return previewErrorResponse('preview R2 get original:', r2Err)
+    }
+
     if (!original) return new Response('文件不存在', { status: 404 })
-    const bytes = await original.arrayBuffer()
+
+    let bytes
+    try {
+      bytes = await original.arrayBuffer()
+    } catch (bufErr) {
+      return previewErrorResponse('preview original.arrayBuffer:', bufErr)
+    }
 
     let variantBytes
     let contentType
@@ -117,7 +165,6 @@ export async function onRequestGet(context) {
         await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(variantKey, id).run()
       }
     } catch (storeErr) {
-      // 生成成功但写入失败时仍返回图片，避免 Evidence 页大量 500
       console.error('preview store failed:', id, kind, storeErr)
     }
 
@@ -130,7 +177,7 @@ export async function onRequestGet(context) {
       },
     })
   } catch (e) {
-    console.error('Preview error:', e)
-    return new Response('获取预览失败', { status: 500 })
+    // 兜底：预览链路不向用户返回 500
+    return previewErrorResponse('Preview unexpected:', e)
   }
 }

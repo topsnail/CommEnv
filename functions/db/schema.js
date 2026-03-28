@@ -1,6 +1,7 @@
 export async function ensureSchema(env) {
   const db = env?.DB
-  if (!db || typeof db.exec !== 'function') {
+  // D1 以 prepare 为准；部分环境未必暴露 exec，误检会导致预览等接口 500
+  if (!db || typeof db.prepare !== 'function') {
     throw new Error('D1 数据库未绑定：请在 wrangler/pages 环境中绑定 env.DB')
   }
 
