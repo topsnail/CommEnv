@@ -1,4 +1,5 @@
 import { ensureSchema } from '../../db/schema.js'
+import { ALLOWED_CATEGORIES } from '../../lib/allowedCategories.js'
 import { requireAdminSession } from '../../lib/adminAuth.js'
 
 export async function onRequestGet(context) {
@@ -41,11 +42,7 @@ export async function onRequestGet(context) {
 }
 
 async function getAdminEvidenceList(env, category, page, pageSize) {
-  const allowedCategories = new Set([
-    'CAT01','CAT02','CAT03','CAT04','CAT05','CAT06','CAT07','CAT08','CAT09','CAT10',
-    'CAT11','CAT12','CAT13','CAT14','CAT15','CAT16','CAT17','CAT18','CAT19','CAT20',
-  ])
-  if (category && !allowedCategories.has(String(category))) {
+  if (category && !ALLOWED_CATEGORIES.has(String(category))) {
     category = null
   }
 

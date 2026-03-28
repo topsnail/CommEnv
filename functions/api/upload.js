@@ -1,18 +1,13 @@
 import * as exifr from 'exifr'
 import { ensureSchema } from '../db/schema.js'
 import { json, newId, roundGps2, sha256Hex } from '../db/utils.js'
-
-const ALLOWED_CATEGORIES = new Set([
-  'CAT01', 'CAT02', 'CAT03', 'CAT04', 'CAT05',
-  'CAT06', 'CAT07', 'CAT08', 'CAT09', 'CAT10',
-  'CAT11', 'CAT12', 'CAT13', 'CAT14', 'CAT15',
-  'CAT16', 'CAT17', 'CAT18', 'CAT19', 'CAT20',
-])
+import { ALLOWED_CATEGORIES } from '../lib/allowedCategories.js'
+import { buildJpegVariantUnderBudget } from '../lib/imageBudget.js'
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024
-// 提高清晰度：缩略图尺寸与质量上调；同时更换 keyPrefix 以便旧缩略图自动失效重建
-const PRESET_THUMB = { maxW: 720, maxH: 720, quality: 0.86, keyPrefix: 'thumb2' }
-const PRESET_PREVIEW = { maxW: 1600, maxH: 1600, quality: 0.82, keyPrefix: 'preview' }
+// 派生图统一 ≤200KB（见 imageBudget.js）；keyPrefix 变更可使旧对象失效重建
+const PRESET_THUMB = { maxW: 720, maxH: 720, startQuality: 0.86, keyPrefix: 'thumb2' }
+const PRESET_PREVIEW = { maxW: 1600, maxH: 1600, startQuality: 0.82, keyPrefix: 'preview' }
 
 function getExtAndMime(file) {
   const name = String(file?.name || '').toLowerCase()
@@ -146,29 +141,6 @@ function normalizeExifDateTimeOriginal(v) {
   return null
 }
 
-function calcFitSize(srcW, srcH, maxW, maxH) {
-  if (!srcW || !srcH) return { width: maxW, height: maxH }
-  const ratio = Math.min(maxW / srcW, maxH / srcH, 1)
-  return {
-    width: Math.max(1, Math.round(srcW * ratio)),
-    height: Math.max(1, Math.round(srcH * ratio)),
-  }
-}
-
-async function buildJpegVariant(bytes, preset) {
-  if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas === 'undefined') {
-    throw new Error('IMAGE_TRANSFORM_UNAVAILABLE')
-  }
-  const blob = new Blob([bytes])
-  const bitmap = await createImageBitmap(blob)
-  const { width, height } = calcFitSize(bitmap.width, bitmap.height, preset.maxW, preset.maxH)
-  const canvas = new OffscreenCanvas(width, height)
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(bitmap, 0, 0, width, height)
-  const outBlob = await canvas.convertToBlob({ type: 'image/jpeg', quality: preset.quality })
-  return outBlob.arrayBuffer()
-}
-
 export async function onRequestPost(context) {
   const { request, env } = context
   try {
@@ -229,26 +201,56 @@ export async function onRequestPost(context) {
         
         const clientThumbFile = thumbs?.[i]
         const clientPreviewFile = previews?.[i]
-        const needThumb = !clientThumbFile
-        const needPreview = !clientPreviewFile
+        let needThumb = !clientThumbFile
+        let needPreview = !clientPreviewFile
 
-        // 1) 如果前端已经提供派生图，直接落盘
+        // 1) 前端若提供派生图，仍经服务器压到 ≤200KB；失败则回退为原图生成
         if (clientThumbFile) {
-          const thumbBytes = await clientThumbFile.arrayBuffer()
-          await env.R2.put(thumbKey, thumbBytes, { httpMetadata: { contentType: 'image/jpeg' } })
-          await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(thumbKey, id).run()
+          try {
+            const raw = await clientThumbFile.arrayBuffer()
+            const thumbBytes = await buildJpegVariantUnderBudget(raw, {
+              maxW: PRESET_THUMB.maxW,
+              maxH: PRESET_THUMB.maxH,
+              startQuality: PRESET_THUMB.startQuality,
+            })
+            await env.R2.put(thumbKey, thumbBytes, { httpMetadata: { contentType: 'image/jpeg' } })
+            await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(thumbKey, id).run()
+          } catch {
+            needThumb = true
+          }
         }
         if (clientPreviewFile) {
-          const previewBytes = await clientPreviewFile.arrayBuffer()
-          await env.R2.put(previewKey, previewBytes, { httpMetadata: { contentType: 'image/jpeg' } })
-          await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(previewKey, id).run()
+          try {
+            const raw = await clientPreviewFile.arrayBuffer()
+            const previewBytes = await buildJpegVariantUnderBudget(raw, {
+              maxW: PRESET_PREVIEW.maxW,
+              maxH: PRESET_PREVIEW.maxH,
+              startQuality: PRESET_PREVIEW.startQuality,
+            })
+            await env.R2.put(previewKey, previewBytes, { httpMetadata: { contentType: 'image/jpeg' } })
+            await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(previewKey, id).run()
+          } catch {
+            needPreview = true
+          }
         }
 
-        // 2) 缺少派生图时，才尝试服务器端生成（兼容本地/部分运行时）
+        // 2) 缺少派生图或前端处理失败时由服务器从原图生成
         if (needThumb || needPreview) {
           const [thumbBytes, previewBytes] = await Promise.all([
-            needThumb ? buildJpegVariant(bytes, PRESET_THUMB) : Promise.resolve(null),
-            needPreview ? buildJpegVariant(bytes, PRESET_PREVIEW) : Promise.resolve(null),
+            needThumb
+              ? buildJpegVariantUnderBudget(bytes, {
+                  maxW: PRESET_THUMB.maxW,
+                  maxH: PRESET_THUMB.maxH,
+                  startQuality: PRESET_THUMB.startQuality,
+                })
+              : Promise.resolve(null),
+            needPreview
+              ? buildJpegVariantUnderBudget(bytes, {
+                  maxW: PRESET_PREVIEW.maxW,
+                  maxH: PRESET_PREVIEW.maxH,
+                  startQuality: PRESET_PREVIEW.startQuality,
+                })
+              : Promise.resolve(null),
           ])
 
           if (thumbBytes) {
@@ -272,7 +274,9 @@ export async function onRequestPost(context) {
         timestamp: uploadTime,
         upload_time: uploadTime,
         hash,
-        url: `/api/files/${id}.${fileSpec.ext}`,
+        // 公开侧仅使用预览 URL；原图不通过此字段暴露（见 /api/files 鉴权）
+        url: `/api/preview/${id}?kind=small`,
+        previewUrl: `/api/preview/${id}?kind=preview`,
       })
     }
 

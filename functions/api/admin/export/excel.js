@@ -1,4 +1,5 @@
 import { ensureSchema } from '../../../db/schema.js'
+import { ALLOWED_CATEGORIES, CATEGORY_LABELS } from '../../../lib/allowedCategories.js'
 import { requireAdminSession } from '../../../lib/adminAuth.js'
 import ExcelJS from 'exceljs'
 
@@ -17,11 +18,7 @@ export async function onRequestGet(context) {
     await ensureSchema(env)
     const url = new URL(request.url)
     const category = String(url.searchParams.get('category') || '')
-    const allowed = new Set([
-      'CAT01','CAT02','CAT03','CAT04','CAT05','CAT06','CAT07','CAT08','CAT09','CAT10',
-      'CAT11','CAT12','CAT13','CAT14','CAT15','CAT16','CAT17','CAT18','CAT19','CAT20',
-    ])
-    const useCategory = allowed.has(category) ? category : ''
+    const useCategory = ALLOWED_CATEGORIES.has(category) ? category : ''
     const MAX_EXPORT_EVIDENCE = 1000
     const sql = `SELECT id, category, description, status, upload_time, hash_sha256, gps_lat, gps_lon,
                         make, model, datetime_original, image_width, image_height, original_key, original_mime
@@ -52,33 +49,10 @@ export async function onRequestGet(context) {
     ]
 
     for (const evidence of rows.results || []) {
-      const categoryNames = {
-        CAT01: '环境卫生脏乱，绿化养护缺失',
-        CAT02: '垃圾清运不及时，异味油污严重',
-        CAT03: '楼道堆物占道，小广告泛滥',
-        CAT04: '电梯故障频发，维保记录缺失',
-        CAT05: '公共设施破损，路灯监控失效',
-        CAT06: '道路积水破损，供水水质异常',
-        CAT07: '外墙脱落渗水，建筑本体破损',
-        CAT08: '消防通道堵塞，消防器材过期',
-        CAT09: '门禁安保松懈，外来人员随意进出',
-        CAT10: '电动车乱停，飞线充电隐患',
-        CAT11: '车辆无序停放，僵尸车占用公共资源',
-        CAT12: '私搭乱建，违规拆改承重墙',
-        CAT13: '养宠不文明，宠物粪便、噪音扰民',
-        CAT14: '商贩占道经营，底商油烟噪音扰民',
-        CAT15: '物业通知滞后，信息公示不透明',
-        CAT16: '公共收益不明，账目未公开',
-        CAT17: '维修质量差，报修响应迟缓',
-        CAT18: '巡检记录缺失或造假',
-        CAT19: '应急物资不足，安全演练流于形式',
-        CAT20: '其他物业服务与响应问题',
-      }
-
       sheet.addRow({
         id: evidence.id,
         type: '图片',
-        category: categoryNames[evidence.category] || evidence.category || '未知',
+        category: CATEGORY_LABELS[evidence.category] || evidence.category || '未知',
         shoot_time: evidence.datetime_original || '',
         upload_time: evidence.upload_time || '',
         description: evidence.description || '',

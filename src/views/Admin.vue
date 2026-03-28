@@ -86,7 +86,7 @@
                 打包下载{{ selectedIds.length > 0 ? `（已选${selectedIds.length}）` : '（全部）' }}
               </button>
               <span class="text-sm text-gray-500 flex items-center">
-                👈原图通过此处下载！
+                👈为保证流畅度，看到的图片都是经过压缩的，仅通过次数可以下载原图！
               </span>
             </div>
           </div>

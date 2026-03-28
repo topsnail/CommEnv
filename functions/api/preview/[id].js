@@ -1,38 +1,23 @@
 import { ensureSchema } from '../../db/schema.js'
 import { requireAdminSession } from '../../lib/adminAuth.js'
+import { MAX_DERIVED_IMAGE_BYTES, buildWebpOrJpegUnderBudget } from '../../lib/imageBudget.js'
 
 const PRESETS = {
-  // 小缩略图：用于列表展示，控制在200KB以下
-  small: { maxW: 400, maxH: 400, quality: 0.7, keyPrefix: 'small' },
-  // 提高清晰度：缩略图尺寸与质量上调；同时更换 keyPrefix 以便旧缩略图自动失效重建
-  thumb: { maxW: 720, maxH: 720, quality: 0.86, keyPrefix: 'thumb2' },
-  preview: { maxW: 1600, maxH: 1600, quality: 0.82, keyPrefix: 'preview' },
+  small: { maxW: 400, maxH: 400, startQuality: 0.7, keyPrefix: 'small', minEdge: 40 },
+  thumb: { maxW: 720, maxH: 720, startQuality: 0.86, keyPrefix: 'thumb2', minEdge: 44 },
+  preview: { maxW: 1600, maxH: 1600, startQuality: 0.78, keyPrefix: 'preview', minEdge: 48 },
 }
 
-function calcFitSize(srcW, srcH, maxW, maxH) {
-  if (!srcW || !srcH) return { width: maxW, height: maxH }
-  const ratio = Math.min(maxW / srcW, maxH / srcH, 1)
-  return {
-    width: Math.max(1, Math.round(srcW * ratio)),
-    height: Math.max(1, Math.round(srcH * ratio)),
+function responseFromCached(cached, extraHeaders = {}) {
+  const headers = new Headers()
+  cached.writeHttpMetadata(headers)
+  if (!headers.get('Content-Type')) {
+    headers.set('Content-Type', String(cached.httpMetadata?.contentType || 'application/octet-stream'))
   }
-}
-
-async function buildImageVariant(bytes, preset, format = 'webp') {
-  if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas === 'undefined') {
-    throw new Error('IMAGE_TRANSFORM_UNAVAILABLE')
-  }
-  const blob = new Blob([bytes])
-  const bitmap = await createImageBitmap(blob)
-  const { width, height } = calcFitSize(bitmap.width, bitmap.height, preset.maxW, preset.maxH)
-  const canvas = new OffscreenCanvas(width, height)
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(bitmap, 0, 0, width, height)
-  const outBlob = await canvas.convertToBlob({
-    type: format === 'webp' ? 'image/webp' : 'image/jpeg',
-    quality: format === 'webp' ? Math.max(0.6, preset.quality - 0.1) : preset.quality
-  })
-  return outBlob.arrayBuffer()
+  headers.set('Cache-Control', 'public, max-age=604800')
+  headers.set('X-Content-Type-Options', 'nosniff')
+  Object.entries(extraHeaders).forEach(([k, v]) => headers.set(k, v))
+  return new Response(cached.body, { headers })
 }
 
 export async function onRequestGet(context) {
@@ -44,16 +29,17 @@ export async function onRequestGet(context) {
     }
 
     const kindParam = new URL(request.url).searchParams.get('kind')
-    const kind = kindParam === 'preview' ? 'preview' : (kindParam === 'small' ? 'small' : 'thumb')
+    const kind = kindParam === 'preview' ? 'preview' : kindParam === 'small' ? 'small' : 'thumb'
     const preset = PRESETS[kind]
     const acceptHeader = request.headers.get('accept') || ''
     const supportsWebP = acceptHeader.includes('image/webp')
-    const format = supportsWebP ? 'webp' : 'jpeg'
     await ensureSchema(env)
 
     const row = await env.DB.prepare(
       'SELECT status, original_key, preview_key, thumb_key, small_key FROM evidence WHERE id = ? LIMIT 1'
-    ).bind(id).first()
+    )
+      .bind(id)
+      .first()
     if (!row) return new Response('证据不存在', { status: 404 })
 
     if (row.status !== 'normal') {
@@ -61,7 +47,6 @@ export async function onRequestGet(context) {
       if (!ok) return new Response('证据已隐藏', { status: 403 })
     }
 
-    // 仅信任与当前预设匹配的 key，避免一直命中旧的低清缩略图
     const currentPrefix = `${preset.keyPrefix}/`
     let primaryKeyRaw = null
     if (kind === 'preview') {
@@ -71,35 +56,38 @@ export async function onRequestGet(context) {
     } else {
       primaryKeyRaw = row.thumb_key
     }
-    const primaryKey = (primaryKeyRaw && String(primaryKeyRaw).startsWith(currentPrefix)) ? primaryKeyRaw : null
-    const secondaryKey = kind === 'thumb' ? row.preview_key : (kind === 'small' ? row.preview_key : null)
-    const selectedKey = [primaryKey, secondaryKey].find((key) => key)
-    if (selectedKey) {
-      const cached = await env.R2.get(String(selectedKey))
-      if (cached) {
-        const headers = new Headers()
-        cached.writeHttpMetadata(headers)
-        // 不要强行覆盖 Content-Type，避免 WebP 被标成 jpeg
-        if (!headers.get('Content-Type')) {
-          headers.set('Content-Type', String(cached.httpMetadata?.contentType || 'application/octet-stream'))
-        }
-        headers.set('Cache-Control', 'public, max-age=604800')
-        headers.set('X-Content-Type-Options', 'nosniff')
-        if (kind === 'thumb' && primaryKey !== selectedKey) {
-          headers.set('X-Preview-Fallback', 'preview-cached')
-        }
-        return new Response(cached.body, { headers })
+    const primaryKey = primaryKeyRaw && String(primaryKeyRaw).startsWith(currentPrefix) ? primaryKeyRaw : null
+    const secondaryKey = kind === 'thumb' ? row.preview_key : kind === 'small' ? row.preview_key : null
+
+    for (const keyCandidate of [primaryKey, secondaryKey].filter(Boolean)) {
+      const cached = await env.R2.get(String(keyCandidate))
+      if (!cached) continue
+      const sz = cached.size
+      if (typeof sz === 'number' && sz > MAX_DERIVED_IMAGE_BYTES) continue
+      const extra = {}
+      if (kind === 'thumb' && row.preview_key && String(keyCandidate) === String(row.preview_key)) {
+        extra['X-Preview-Fallback'] = 'preview-cached'
       }
+      return responseFromCached(cached, extra)
     }
 
     const original = await env.R2.get(String(row.original_key || ''))
     if (!original) return new Response('文件不存在', { status: 404 })
     const bytes = await original.arrayBuffer()
-    try {
-      const variantBytes = await buildImageVariant(bytes, preset, format)
-      const variantKey = `${preset.keyPrefix}/${id}.${format}`
 
-      await env.R2.put(variantKey, variantBytes, { httpMetadata: { contentType: format === 'webp' ? 'image/webp' : 'image/jpeg' } })
+    try {
+      const { buffer: variantBytes, contentType } = await buildWebpOrJpegUnderBudget(bytes, {
+        maxW: preset.maxW,
+        maxH: preset.maxH,
+        startQuality: preset.startQuality,
+        minEdge: preset.minEdge,
+        preferWebp: supportsWebP,
+        maxBytes: MAX_DERIVED_IMAGE_BYTES,
+      })
+      const ext = contentType.includes('webp') ? 'webp' : 'jpg'
+      const variantKey = `${preset.keyPrefix}/${id}.${ext}`
+
+      await env.R2.put(variantKey, variantBytes, { httpMetadata: { contentType } })
       if (kind === 'preview') {
         await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(variantKey, id).run()
       } else if (kind === 'small') {
@@ -111,30 +99,22 @@ export async function onRequestGet(context) {
       return new Response(variantBytes, {
         status: 200,
         headers: {
-          'Content-Type': format === 'webp' ? 'image/webp' : 'image/jpeg',
+          'Content-Type': contentType,
           'Cache-Control': 'public, max-age=604800',
           'X-Content-Type-Options': 'nosniff',
         },
       })
     } catch (err) {
-      // 本地/部分运行时不支持图像处理 API，回退原图以保证联调可用。
       if (String(err?.message || '').includes('IMAGE_TRANSFORM_UNAVAILABLE')) {
-        if (kind === 'thumb') {
-          return new Response('缩略图暂不可用', {
-            status: 503,
-            headers: {
-              'Cache-Control': 'no-store',
-              'X-Content-Type-Options': 'nosniff',
-              'X-Preview-Fallback': 'unavailable',
-            },
-          })
-        }
-        const headers = new Headers()
-        original.writeHttpMetadata(headers)
-        headers.set('Cache-Control', 'public, max-age=600')
-        headers.set('X-Content-Type-Options', 'nosniff')
-        headers.set('X-Preview-Fallback', 'original')
-        return new Response(bytes, { status: 200, headers })
+        return new Response('预览暂不可用（服务端无法生成压缩图）', {
+          status: 503,
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Cache-Control': 'no-store',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Preview-Fallback': 'unavailable',
+          },
+        })
       }
       throw err
     }
@@ -143,4 +123,3 @@ export async function onRequestGet(context) {
     return new Response('获取预览失败', { status: 500 })
   }
 }
-
