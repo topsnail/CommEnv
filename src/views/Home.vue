@@ -6,6 +6,21 @@
         <p class="text-gray-600 text-sm sm:text-base">合法留存证据 · 维护业主权益</p>
       </div>
 
+      <div class="bg-red-50 border-l-4 border-red-500 p-4 section-gap rounded-r-lg shadow-md">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700 font-medium">
+              普通人维权时，证据不是最重要的，但没有证据你连资格都没有！
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 section-gap rounded-r-lg">
         <div class="flex items-start">
           <div class="flex-shrink-0">
@@ -135,7 +150,10 @@
 
       <!-- 法律声明链接 -->
       <div class="text-center pt-3 border-t border-gray-200">
-        <div class="flex items-center justify-center gap-4">
+        <div class="flex items-center justify-center gap-4 flex-wrap">
+          <button @click="goToPhotoGuide" class="text-gray-500 hover:text-gray-700 underline text-xs">
+            拍照规范
+          </button>
           <button @click="goToLegal" class="text-gray-500 hover:text-gray-700 underline text-xs">
             法律声明与用户协议
           </button>
@@ -184,5 +202,9 @@ const goToLegal = () => {
 
 const goToTutorial = () => {
   router.push('/tutorial')
+}
+
+const goToPhotoGuide = () => {
+  router.push('/photo-guide')
 }
 </script>

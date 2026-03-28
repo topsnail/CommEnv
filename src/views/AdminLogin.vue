@@ -88,7 +88,12 @@ const loading = ref(false)
 const error = ref('')
 
 const handleLogin = async () => {
-  if (!password.value) return
+  if (!password.value) {
+    error.value = '请输入密码'
+    return
+  }
+  
+  if (loading.value) return
   
   loading.value = true
   error.value = ''

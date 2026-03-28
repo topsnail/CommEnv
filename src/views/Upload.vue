@@ -39,29 +39,29 @@
             已选择
           </span>
         </div>
-        <div class="space-y-3 sm:space-y-4">
+        <div class="space-y-2 sm:space-y-4">
           <div v-for="(group, index) in categories" :key="group.group" :class="[
-            'space-y-1.5 sm:space-y-2 p-2 sm:p-3 rounded-lg',
+            'space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg',
             index % 2 === 0 ? 'bg-gray-50/50' : 'bg-blue-50/30'
           ]">
             <h3 class="text-xs font-medium text-gray-600 uppercase tracking-wider flex items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full" :class="index % 2 === 0 ? 'bg-gray-400' : 'bg-blue-400'"></span>
               {{ group.group }}
             </h3>
-            <div class="grid grid-cols-2 gap-1.5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1">
               <button
                 v-for="cat in group.items"
                 :key="cat.id"
                 type="button"
                 @click="selectedCategory = cat.id"
                 :class="[
-                  'w-full text-left border rounded-lg px-2 sm:px-3 py-1.5 transition-all duration-200 h-9 sm:h-10 overflow-hidden',
+                  'w-full text-left border rounded-lg px-2 sm:px-3 py-1.5 transition-all duration-200 min-h-[2rem] sm:h-10',
                   selectedCategory === cat.id 
                     ? 'border-blue-600 bg-blue-100 text-blue-800 shadow-sm ring-1 ring-blue-300' 
                     : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
                 ]"
               >
-                <span class="text-xs sm:text-sm font-medium truncate block">{{ cat.icon }} {{ cat.name }}</span>
+                <span class="text-xs sm:text-sm font-medium leading-tight">{{ cat.icon }} {{ cat.name }}</span>
               </button>
             </div>
           </div>
@@ -143,8 +143,8 @@
       </div>
 
       <button
-        @click="openComplianceModal"
-        :disabled="!canUpload || uploading"
+        @click="handleUploadClick"
+        :disabled="uploading"
         class="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed section-gap"
       >
         <span v-if="uploading">
@@ -341,8 +341,19 @@ const removeFile = (index) => {
   selectedFiles.value.splice(index, 1)
 }
 
+const handleUploadClick = () => {
+  if (selectedFiles.value.length === 0) {
+    alert('请先选择要上传的文件')
+    return
+  }
+  if (!selectedCategory.value) {
+    alert('请先选择问题分类')
+    return
+  }
+  openComplianceModal()
+}
+
 const openComplianceModal = () => {
-  if (!canUpload.value) return
   complianceChecked.value = false
   showComplianceModal.value = true
 }
