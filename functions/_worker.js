@@ -1,3 +1,5 @@
+import * as previewImpl from './api/preview/impl.js'
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url)
@@ -78,9 +80,8 @@ export default {
       return mod.onRequestGet({ request, env, params: { file } })
     }
     if (/^\/api\/preview\/[^/]+$/.test(pathname)) {
-      const mod = await import('./api/preview/[id].js')
       const id = pathname.split('/').pop()
-      return mod.onRequestGet({
+      return previewImpl.onRequestGet({
         request,
         env,
         params: { id },
