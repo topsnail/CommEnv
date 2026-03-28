@@ -16,6 +16,7 @@
           <div class="ml-3">
             <p class="text-sm text-red-700 font-medium">
               普通人维权时，证据不是最重要的，但没有证据你连资格都没有！
+              <button @click="goToPhotoGuide" class="ml-1 underline hover:text-red-900">查看拍照取证规范→</button>
             </p>
           </div>
         </div>
@@ -152,7 +153,7 @@
       <div class="text-center pt-3 border-t border-gray-200">
         <div class="flex items-center justify-center gap-4 flex-wrap">
           <button @click="goToPhotoGuide" class="text-gray-500 hover:text-gray-700 underline text-xs">
-            拍照规范
+            拍照取证规范
           </button>
           <button @click="goToLegal" class="text-gray-500 hover:text-gray-700 underline text-xs">
             法律声明与用户协议

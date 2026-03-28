@@ -79,6 +79,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { adminApi } from '@/api'
+import { MESSAGES } from '@/constants'
 
 const router = useRouter()
 
@@ -99,7 +100,11 @@ const handleLogin = async () => {
   error.value = ''
   
   try {
-    await adminApi.login(password.value)
+    const response = await adminApi.login(password.value)
+    // 保存认证令牌
+    if (response.token) {
+      localStorage.setItem('admin_token', response.token)
+    }
     router.push('/admin')
   } catch (err) {
     error.value = err.response?.data?.message || '登录失败，请检查密码'

@@ -39,9 +39,9 @@
             已选择
           </span>
         </div>
-        <div class="space-y-2 sm:space-y-4">
+        <div class="space-y-1">
           <div v-for="(group, index) in categories" :key="group.group" :class="[
-            'space-y-1 sm:space-y-2 p-2 sm:p-3 rounded-lg',
+            'space-y-1 p-1.5 rounded-lg',
             index % 2 === 0 ? 'bg-gray-50/50' : 'bg-blue-50/30'
           ]">
             <h3 class="text-xs font-medium text-gray-600 uppercase tracking-wider flex items-center gap-1">
@@ -142,7 +142,66 @@
         ></textarea>
       </div>
 
+      <!-- 合规确认区域（嵌入式） -->
+      <div v-if="showComplianceSection" class="bg-blue-50 border border-blue-200 rounded-xl p-4 section-gap">
+        <h3 class="text-base font-bold text-blue-800 mb-3 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+          </svg>
+          上传前确认
+        </h3>
+        <div class="space-y-2 text-sm text-gray-700 mb-4">
+          <p>请确认您上传的内容符合以下要求：</p>
+          <ul class="list-disc list-inside space-y-1 text-gray-600">
+            <li>拍摄的是小区公共环境问题</li>
+            <li>不包含住户室内、门窗内场景</li>
+            <li>不包含清晰可辨识的人脸</li>
+            <li>不包含清晰可辨识的车牌</li>
+            <li>不涉及个人隐私信息</li>
+          </ul>
+        </div>
+        <label class="flex items-start gap-2 mb-4 cursor-pointer">
+          <input
+            type="checkbox"
+            v-model="complianceChecked"
+            class="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+          <span class="text-sm text-gray-700">我已确认以上内容符合要求</span>
+        </label>
+        <div class="flex gap-3">
+          <button
+            class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg text-sm font-medium"
+            @click="closeComplianceSection"
+          >
+            取消
+          </button>
+          <button
+            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="!complianceChecked || uploading"
+            @click="confirmAndUpload"
+          >
+            <span v-if="uploading">
+              <span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1"></span>
+              上传中...
+            </span>
+            <span v-else>确认上传 {{ selectedFiles.length > 0 ? `(${selectedFiles.length}个文件)` : '' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 提示信息 -->
+      <div v-if="uploadTip" class="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg mb-3">
+        <p class="text-sm text-amber-700 flex items-center gap-2">
+          <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {{ uploadTip }}
+        </p>
+      </div>
+
+      <!-- 默认上传按钮 -->
       <button
+        v-else
         @click="handleUploadClick"
         :disabled="uploading"
         class="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed section-gap"
@@ -156,45 +215,21 @@
         </span>
       </button>
 
-      <div
-        v-if="showComplianceModal"
-        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-        @click="closeComplianceModal"
-      >
-        <div class="bg-white rounded-xl max-w-md w-full p-5" @click.stop>
-          <h3 class="text-lg font-bold mb-3">上传前确认</h3>
-          <div class="space-y-2 text-sm text-gray-700 mb-4">
-            <p>请确认您上传的内容符合以下要求：</p>
-            <ul class="list-disc list-inside space-y-1 text-gray-600">
-              <li>拍摄的是小区公共环境问题</li>
-              <li>不包含住户室内、门窗内场景</li>
-              <li>不包含清晰可辨识的人脸</li>
-              <li>不包含清晰可辨识的车牌</li>
-              <li>不涉及个人隐私信息</li>
-            </ul>
+      <!-- 上传进度 -->
+      <div v-if="uploading" class="mt-4 bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+        <div class="space-y-3">
+          <div class="flex justify-between items-center">
+            <p class="text-sm text-blue-700 font-medium">{{ uploadStatusText }}</p>
+            <span class="text-sm font-medium">{{ uploadProgress }}%</span>
           </div>
-          <label class="flex items-start gap-2 mb-4 cursor-pointer">
-            <input
-              type="checkbox"
-              v-model="complianceChecked"
-              class="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-            />
-            <span class="text-sm text-gray-700">我已确认以上内容符合要求</span>
-          </label>
-          <div class="flex gap-3">
-            <button
-              class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg text-sm font-medium"
-              @click="closeComplianceModal"
-            >
-              取消
-            </button>
-            <button
-              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="!complianceChecked || uploading"
-              @click="confirmAndUpload"
-            >
-              确认上传
-            </button>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              class="bg-blue-600 h-2 rounded-full transition-all duration-200 ease-out" 
+              :style="{ width: uploadProgress + '%' }"
+            ></div>
+          </div>
+          <div v-if="selectedFiles.length > 1" class="text-xs text-gray-600">
+            上传完成后会自动清空选择，开始新的上传
           </div>
         </div>
       </div>
@@ -217,6 +252,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { categories, APP_CONFIG, MESSAGES } from '@/constants'
 import { evidenceApi } from '@/api'
 
 const router = useRouter()
@@ -227,71 +263,14 @@ const selectedFiles = ref([])
 const selectedCategory = ref('')
 const description = ref('')
 const dragging = ref(false)
-const showComplianceModal = ref(false)
+const showComplianceSection = ref(false)
 const complianceChecked = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
 const uploadStatusText = ref('')
 const uploadSuccess = ref(false)
 const uploadError = ref('')
-
-const categories = [
-  {
-    group: '环境卫生与绿化管理',
-    items: [
-      { id: 'CAT01', name: '楼道电梯脏乱，小广告乱贴', icon: '🧹' },
-      { id: 'CAT02', name: '垃圾满溢异味重，大件长期堆放', icon: '🗑️' },
-      { id: 'CAT03', name: '绿化荒芜杂草多，绿植枯萎死亡', icon: '🌿' },
-      { id: 'CAT04', name: '卫生死角长期无人清理，无定期深度保洁', icon: '🧽' }
-    ]
-  },
-  {
-    group: '基础设施与公共设备',
-    items: [
-      { id: 'CAT05', name: '电梯故障频发，维保记录缺失或造假', icon: '🏢' },
-      { id: 'CAT06', name: '路灯楼道灯监控损坏，公共设施失修', icon: '💡' },
-      { id: 'CAT07', name: '路面破损积水，供水排水异常', icon: '🛣️' },
-      { id: 'CAT08', name: '外墙脱落渗水，建筑部件老化', icon: '🏚️' },
-      { id: 'CAT09', name: '门禁道闸故障，设备缺乏保养', icon: '🚪' }
-    ]
-  },
-  {
-    group: '公共安全与消防隐患',
-    items: [
-      { id: 'CAT10', name: '消防通道堵塞，器材过期失效', icon: '🧯' },
-      { id: 'CAT11', name: '门禁失控形同虚设，安保缺位疏于值守', icon: '👮' },
-      { id: 'CAT12', name: '电动车进楼，充电区域不规范', icon: '⚡' },
-      { id: 'CAT13', name: '私搭乱建，侵占公共绿地空间', icon: '🏗️' },
-      { id: 'CAT14', name: '应急物资不足，预案响应迟缓', icon: '🚨' },
-      { id: 'CAT15', name: '安全演练缺失或流于形式', icon: '📋' }
-    ]
-  },
-  {
-    group: '居民行为与公共秩序',
-    items: [
-      { id: 'CAT16', name: '车辆乱停占用通道与公共车位', icon: '🚗' },
-      { id: 'CAT17', name: '养宠不文明，粪便不清理扰民', icon: '🐾' },
-      { id: 'CAT18', name: '占道经营，噪音油烟扰民严重', icon: '🍢' },
-      { id: 'CAT19', name: '楼道堆放杂物占用公共空间', icon: '📦' }
-    ]
-  },
-  {
-    group: '物业管理与服务品质',
-    items: [
-      { id: 'CAT20', name: '停水停电未提前告知业主', icon: '💧' },
-      { id: 'CAT21', name: '公告信息长期不更新不透明', icon: '📢' },
-      { id: 'CAT22', name: '公共收益去向不明未公示', icon: '💰' },
-      { id: 'CAT23', name: '工作人员不规范服务态度差', icon: '👥' },
-      { id: 'CAT24', name: '报修电话无人接听回复迟缓', icon: '📞' },
-      { id: 'CAT25', name: '维修质量差问题反复出现', icon: '🔧' },
-      { id: 'CAT26', name: '维修后无回访跟踪机制', icon: '🔄' },
-      { id: 'CAT27', name: '疑难问题无方案无解决时限', icon: '❓' },
-      { id: 'CAT28', name: '设施缺乏保养巡检记录造假', icon: '📝' },
-      { id: 'CAT29', name: '公共照明浪费增加公摊费用', icon: '💡' },
-      { id: 'CAT30', name: '各类档案记录残缺管理混乱', icon: '📁' }
-    ]
-  }
-]
+const uploadTip = ref('')
 
 const canUpload = computed(() => {
   return selectedFiles.value.length > 0 && selectedCategory.value
@@ -342,24 +321,25 @@ const removeFile = (index) => {
 }
 
 const handleUploadClick = () => {
+  uploadTip.value = ''
   if (selectedFiles.value.length === 0) {
-    alert('请先选择要上传的文件')
+    uploadTip.value = '请先选择要上传的文件'
     return
   }
   if (!selectedCategory.value) {
-    alert('请先选择问题分类')
+    uploadTip.value = '请先选择问题分类'
     return
   }
-  openComplianceModal()
+  openComplianceSection()
 }
 
-const openComplianceModal = () => {
+const openComplianceSection = () => {
   complianceChecked.value = false
-  showComplianceModal.value = true
+  showComplianceSection.value = true
 }
 
-const closeComplianceModal = () => {
-  showComplianceModal.value = false
+const closeComplianceSection = () => {
+  showComplianceSection.value = false
   complianceChecked.value = false
 }
 
@@ -396,7 +376,7 @@ const confirmAndUpload = async () => {
     selectedFiles.value = []
     selectedCategory.value = ''
     description.value = ''
-    closeComplianceModal()
+    closeComplianceSection()
   } catch (error) {
     console.error('上传失败:', error)
     uploadError.value = error.response?.data?.error || '上传失败，请重试'

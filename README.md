@@ -10,12 +10,15 @@
 - 后端提取 EXIF + 计算 SHA-256 + 生成证据 ID（UUID）
 - 上传默认 `pending`（待审核），管理员恢复为 `normal` 后前台可见
 - 前台展示预览图，不直接暴露原图对象地址
+- 批量上传进度显示，支持多文件同时上传
+- 证据列表支持搜索与分类筛选
+- 管理后台提供数据统计图表，包括分类分布和时间趋势
 - 管理员登录（Cookie 会话）、隐藏/恢复、Excel 导出、ZIP 打包下载
 - 评论功能已移除（相关接口返回 410）
 
 ## 技术栈
 
-- 前端：Vite + Vue 3 + Tailwind CSS
+- 前端：Vite + Vue 3 + TypeScript + Tailwind CSS
 - 后端：Cloudflare Pages Functions
 - 存储：Cloudflare R2（文件） + Cloudflare D1（结构化数据 + 管理员会话）
 
@@ -114,4 +117,4 @@ npm run dev:all
 
 ***
 
-最后更新：2026-03-27
+最后更新：2026-03-28

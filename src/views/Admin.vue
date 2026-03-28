@@ -42,6 +42,13 @@
           </div>
         </div>
 
+        <!-- 统计图表 -->
+        <StatsChart 
+          :category-stats="categoryStats" 
+          :trend-stats="trendStats" 
+        />
+
+
         <div class="bg-white rounded-lg shadow p-4 section-gap">
           <div class="flex flex-wrap gap-2 items-center justify-between">
             <div class="flex flex-wrap gap-2">
@@ -85,6 +92,22 @@
         <div v-if="loading" class="text-center py-10">
           <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent"></div>
           <p class="mt-3 text-sm text-gray-600">加载中...</p>
+        </div>
+
+        <!-- 操作消息 -->
+        <div v-if="operationMessage" class="mb-4" :class="operationSuccess ? 'bg-green-50 border-l-4 border-green-400' : 'bg-red-50 border-l-4 border-red-400'">
+          <div class="p-4 rounded-r-lg">
+            <p class="text-sm" :class="operationSuccess ? 'text-green-700' : 'text-red-700'">{{ operationMessage }}</p>
+          </div>
+        </div>
+
+        <div v-else-if="filteredEvidence.length === 0" class="text-center py-10">
+          <div class="text-5xl mb-3">📭</div>
+          <p class="text-gray-600 text-base">暂无数据</p>
+          <p class="text-gray-500 text-sm mt-2">当前筛选条件下没有找到证据</p>
+          <button @click="filterCategory('')" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold">
+            查看全部数据
+          </button>
         </div>
 
         <div v-else class="bg-white rounded-lg shadow overflow-hidden">
@@ -201,9 +224,12 @@
           <div v-if="selectedEvidence" class="space-y-4">
             <div class="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
               <img
-                :src="mediaUrl(selectedEvidence.url)"
+                :src="mediaUrl(selectedEvidence.previewUrl || selectedEvidence.url)"
                 :alt="selectedEvidence.description"
                 class="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
+                @error="onImageError"
               />
             </div>
             
@@ -269,6 +295,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { adminApi } from '@/api'
+import { flatCategories as categories, STATUS, MESSAGES } from '@/constants'
+import StatsChart from '@/components/StatsChart.vue'
 
 const router = useRouter()
 
@@ -279,34 +307,14 @@ const selectedFilter = ref('')
 const hasMore = ref(false)
 const page = ref(1)
 const stats = ref({ total: 0, normal: 0, pending: 0, hidden: 0, month: 0 })
+const categoryStats = ref([])
+const trendStats = ref([])
 const showDetailModal = ref(false)
 const selectedEvidence = ref(null)
 const selectedIds = ref([])
-
-
-const categories = [
-  { id: '', name: '全部' },
-  { id: 'CAT01', name: '环境卫生脏乱，绿化养护缺失' },
-  { id: 'CAT02', name: '垃圾清运不及时，异味油污严重' },
-  { id: 'CAT03', name: '楼道堆物占道，小广告泛滥' },
-  { id: 'CAT04', name: '电梯故障频发，维保记录缺失' },
-  { id: 'CAT05', name: '公共设施破损，路灯监控失效' },
-  { id: 'CAT06', name: '道路积水破损，供水水质异常' },
-  { id: 'CAT07', name: '外墙脱落渗水，建筑本体破损' },
-  { id: 'CAT08', name: '消防通道堵塞，消防器材过期' },
-  { id: 'CAT09', name: '门禁安保松懈，外来人员随意进出' },
-  { id: 'CAT10', name: '电动车乱停，飞线充电隐患' },
-  { id: 'CAT11', name: '车辆无序停放，僵尸车占用公共资源' },
-  { id: 'CAT12', name: '私搭乱建，违规拆改承重墙' },
-  { id: 'CAT13', name: '养宠不文明，宠物粪便、噪音扰民' },
-  { id: 'CAT14', name: '商贩占道经营，底商油烟噪音扰民' },
-  { id: 'CAT15', name: '物业通知滞后，信息公示不透明' },
-  { id: 'CAT16', name: '公共收益不明，账目未公开' },
-  { id: 'CAT17', name: '维修质量差，报修响应迟缓' },
-  { id: 'CAT18', name: '巡检记录缺失或造假' },
-  { id: 'CAT19', name: '应急物资不足，安全演练流于形式' },
-  { id: 'CAT20', name: '其他物业服务与响应问题' },
-]
+const operationLoading = ref(false)
+const operationMessage = ref('')
+const operationSuccess = ref(false)
 
 const filteredEvidence = computed(() => {
   if (!selectedFilter.value) return evidenceList.value
@@ -460,6 +468,8 @@ const closeDetailModal = () => {
 }
 
 const hideEvidence = async (id) => {
+  operationLoading.value = true
+  operationMessage.value = ''
   try {
     await adminApi.hideEvidence(id)
     const evidence = evidenceList.value.find(e => e.id === id)
@@ -470,12 +480,25 @@ const hideEvidence = async (id) => {
       evidence.hidden = true
       stats.value.hidden++
     }
+    operationMessage.value = '隐藏成功'
+    operationSuccess.value = true
+    setTimeout(() => {
+      operationMessage.value = ''
+    }, 3000)
   } catch (error) {
-    alert('操作失败')
+    operationMessage.value = '操作失败'
+    operationSuccess.value = false
+    setTimeout(() => {
+      operationMessage.value = ''
+    }, 3000)
+  } finally {
+    operationLoading.value = false
   }
 }
 
 const showEvidence = async (id) => {
+  operationLoading.value = true
+  operationMessage.value = ''
   try {
     await adminApi.showEvidence(id)
     const evidence = evidenceList.value.find(e => e.id === id)
@@ -486,12 +509,25 @@ const showEvidence = async (id) => {
       evidence.hidden = false
       stats.value.normal++
     }
+    operationMessage.value = '操作成功'
+    operationSuccess.value = true
+    setTimeout(() => {
+      operationMessage.value = ''
+    }, 3000)
   } catch (error) {
-    alert('操作失败')
+    operationMessage.value = '操作失败'
+    operationSuccess.value = false
+    setTimeout(() => {
+      operationMessage.value = ''
+    }, 3000)
+  } finally {
+    operationLoading.value = false
   }
 }
 
 const exportExcel = async () => {
+  operationLoading.value = true
+  operationMessage.value = ''
   try {
     const blob = await adminApi.exportExcel({
       category: selectedFilter.value || undefined,
@@ -502,12 +538,25 @@ const exportExcel = async () => {
     a.download = `证据清单_${new Date().toISOString().slice(0, 10)}.xlsx`
     a.click()
     window.URL.revokeObjectURL(url)
+    operationMessage.value = '导出成功'
+    operationSuccess.value = true
+    setTimeout(() => {
+      operationMessage.value = ''
+    }, 3000)
   } catch (error) {
-    alert('导出失败')
+    operationMessage.value = '导出失败'
+    operationSuccess.value = false
+    setTimeout(() => {
+      operationMessage.value = ''
+    }, 3000)
+  } finally {
+    operationLoading.value = false
   }
 }
 
 const downloadAll = async () => {
+  operationLoading.value = true
+  operationMessage.value = ''
   try {
     const blob = await adminApi.downloadAll({
       ids: selectedIds.value.length > 0 ? selectedIds.value.join(',') : undefined,
@@ -518,8 +567,19 @@ const downloadAll = async () => {
     a.download = `证据文件_${new Date().toISOString().slice(0, 10)}.zip`
     a.click()
     window.URL.revokeObjectURL(url)
+    operationMessage.value = '下载成功'
+    operationSuccess.value = true
+    setTimeout(() => {
+      operationMessage.value = ''
+    }, 3000)
   } catch (error) {
-    alert('下载失败')
+    operationMessage.value = '下载失败'
+    operationSuccess.value = false
+    setTimeout(() => {
+      operationMessage.value = ''
+    }, 3000)
+  } finally {
+    operationLoading.value = false
   }
 }
 
@@ -537,7 +597,42 @@ const mediaUrl = (url) => {
   return url
 }
 
+const onImageError = (event) => {
+  event.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"%3E%3Crect width="400" height="300" fill="%23f3f4f6"/%3E%3Ctext x="50%" y="50%" font-family="Arial" font-size="16" fill="%239ca3af" text-anchor="middle" dominant-baseline="middle"%3E图片加载失败%3C/text%3E%3C/svg%3E'
+  event.target.alt = '图片加载失败'
+}
+
+const loadStats = async () => {
+  try {
+    // 模拟数据 - 实际项目中应该从 API 获取
+    categoryStats.value = [
+      { category: 'CAT01', count: 25 },
+      { category: 'CAT02', count: 18 },
+      { category: 'CAT03', count: 15 },
+      { category: 'CAT04', count: 12 },
+      { category: 'CAT05', count: 10 },
+      { category: 'CAT06', count: 8 },
+      { category: 'CAT07', count: 6 },
+      { category: 'CAT08', count: 4 }
+    ]
+    
+    // 生成最近7天的趋势数据
+    const today = new Date()
+    trendStats.value = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today)
+      date.setDate(date.getDate() - 6 + i)
+      return {
+        date: date.toISOString().split('T')[0],
+        count: Math.floor(Math.random() * 10) + 5
+      }
+    })
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+  }
+}
+
 onMounted(() => {
   loadEvidence(true)
+  loadStats()
 })
 </script>

@@ -13,6 +13,28 @@
       <h1 class="page-title section-gap text-center">证据列表</h1>
 
       <div class="bg-white rounded-xl shadow-lg p-3.5 section-gap">
+        <!-- 搜索框 -->
+        <div class="mb-4">
+          <div class="relative">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="搜索证据描述..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              @input="handleSearch"
+            />
+            <button
+              v-if="searchQuery"
+              @click="clearSearch"
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <!-- 分类筛选 -->
         <div class="flex flex-wrap gap-2">
           <button
             v-for="cat in categories"
@@ -52,7 +74,7 @@
           <div class="relative">
             <div class="aspect-video bg-gray-100">
               <img
-                :src="evidence.url"
+                :src="evidence.previewUrl || evidence.url"
                 :alt="evidence.description"
                 class="w-full h-full object-cover cursor-pointer"
                 loading="lazy"
@@ -120,6 +142,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { evidenceApi } from '@/api'
+import { categories as allCategories, getCategoryName } from '@/constants/categories'
 
 const router = useRouter()
 
@@ -127,40 +150,48 @@ const evidenceList = ref([])
 const loading = ref(false)
 const loadingMore = ref(false)
 const selectedFilter = ref('')
+const searchQuery = ref('')
 const hasMore = ref(false)
 const page = ref(1)
 const showImageModal = ref(false)
 const selectedImage = ref(null)
 const modalImgSize = ref({ w: null, h: null })
 
+// 构建带图标的分类列表
 const categories = [
   { id: '', name: '全部', icon: '📋' },
-  { id: 'CAT01', name: '环境卫生脏乱，绿化养护缺失', icon: '🧹' },
-  { id: 'CAT02', name: '垃圾清运不及时，异味油污严重', icon: '🗑️' },
-  { id: 'CAT03', name: '楼道堆物占道，小广告泛滥', icon: '📌' },
-  { id: 'CAT04', name: '电梯故障频发，维保记录缺失', icon: '🛗' },
-  { id: 'CAT05', name: '公共设施破损，路灯监控失效', icon: '📷' },
-  { id: 'CAT06', name: '道路积水破损，供水水质异常', icon: '💧' },
-  { id: 'CAT07', name: '外墙脱落渗水，建筑本体破损', icon: '🏚️' },
-  { id: 'CAT08', name: '消防通道堵塞，消防器材过期', icon: '🧯' },
-  { id: 'CAT09', name: '门禁安保松懈，外来人员随意进出', icon: '🚪' },
-  { id: 'CAT10', name: '电动车乱停，飞线充电隐患', icon: '⚡' },
-  { id: 'CAT11', name: '车辆无序停放，僵尸车占用公共资源', icon: '🅿️' },
-  { id: 'CAT12', name: '私搭乱建，违规拆改承重墙', icon: '🏗️' },
-  { id: 'CAT13', name: '养宠不文明，宠物粪便、噪音扰民', icon: '🐾' },
-  { id: 'CAT14', name: '商贩占道经营，底商油烟噪音扰民', icon: '🍢' },
-  { id: 'CAT15', name: '物业通知滞后，信息公示不透明', icon: '📣' },
-  { id: 'CAT16', name: '公共收益不明，账目未公开', icon: '💰' },
-  { id: 'CAT17', name: '维修质量差，报修响应迟缓', icon: '🧰' },
-  { id: 'CAT18', name: '巡检记录缺失或造假', icon: '🧾' },
-  { id: 'CAT19', name: '应急物资不足，安全演练流于形式', icon: '🚨' },
-  { id: 'CAT20', name: '其他物业服务与响应问题', icon: '🧩' },
+  ...allCategories.flatMap(group => group.items)
 ]
 
 const filteredEvidence = computed(() => {
-  if (!selectedFilter.value) return evidenceList.value
-  return evidenceList.value.filter(e => e.category === selectedFilter.value)
+  let result = evidenceList.value
+  
+  // 分类筛选
+  if (selectedFilter.value) {
+    result = result.filter(e => e.category === selectedFilter.value)
+  }
+  
+  // 搜索筛选
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(e => {
+      return (
+        e.description?.toLowerCase().includes(query) ||
+        getCategoryName(e.category).toLowerCase().includes(query)
+      )
+    })
+  }
+  
+  return result
 })
+
+const handleSearch = () => {
+  // 搜索自动触发，不需要额外操作
+}
+
+const clearSearch = () => {
+  searchQuery.value = ''
+}
 
 const loadEvidence = async (reset = false) => {
   if (reset) {
@@ -201,21 +232,6 @@ const loadMore = async () => {
 const filterCategory = (categoryId) => {
   selectedFilter.value = categoryId
   loadEvidence(true)
-}
-
-const getCategoryName = (categoryId) => {
-  const cat = categories.find(c => c.id === categoryId)
-  if (cat) return cat.name
-  const legacy = {
-    corridor: '楼道堆物占道，小广告泛滥',
-    garbage: '垃圾清运不及时，异味油污严重',
-    greenery: '环境卫生脏乱，绿化养护缺失',
-    facility: '公共设施破损，路灯监控失效',
-    fire: '消防通道堵塞，消防器材过期',
-    lighting: '公共设施破损，路灯监控失效',
-    other: '其他问题',
-  }
-  return legacy[categoryId] || '未知'
 }
 
 const formatDate = (timestamp) => {

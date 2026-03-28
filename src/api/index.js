@@ -6,6 +6,38 @@ const api = axios.create({
   withCredentials: true,
 })
 
+// 请求拦截器
+api.interceptors.request.use(
+  (config) => {
+    // 为管理后台 API 添加认证令牌
+    if (config.url.startsWith('/admin')) {
+      const token = localStorage.getItem('admin_token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// 响应拦截器
+api.interceptors.response.use(
+  (response) => {
+    return response
+  },
+  (error) => {
+    // 处理认证失败
+    if (error.response?.status === 401) {
+      localStorage.removeItem('admin_token')
+      window.location.href = '/admin/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 export const evidenceApi = {
   upload: async (formData, onProgress) => {
     const response = await api.post('/upload', formData, {

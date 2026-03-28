@@ -10,7 +10,7 @@
         </button>
       </div>
 
-      <h1 class="page-title section-gap text-center">拍照规范指南</h1>
+      <h1 class="page-title section-gap text-center">拍照取证规范指南</h1>
 
       <div class="bg-white rounded-xl shadow-lg card-pad section-gap">
         <h2 class="section-title">一、通用核心取证规范（强化法律效力）</h2>
