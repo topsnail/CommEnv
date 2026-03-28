@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 pb-20">
-    <div class="max-w-2xl mx-auto page-shell">
+    <div class="max-w-4xl mx-auto page-shell">
       <div class="section-gap">
         <button @click="goBack" class="text-gray-600 hover:text-gray-800 flex items-center">
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -12,16 +12,16 @@
 
       <h1 class="page-title section-gap text-center">上传证据</h1>
 
-      <div class="bg-red-50 border-l-4 border-red-400 p-3.5 section-gap rounded-r-lg">
+      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r-lg mb-4">
         <div class="flex items-start">
           <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            <svg class="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
           <div class="ml-3">
-            <p class="text-sm text-red-700">
-              <strong>重要提示：</strong>请勿拍摄人脸、车牌、住户室内、门窗内等隐私内容。仅拍摄小区公共区域。
+            <p class="text-sm text-yellow-700">
+              <strong>法律合规提示：</strong>仅允许拍摄小区公共区域，严禁拍摄住户室内、门窗内、清晰人脸、车牌、个人隐私。上传前请仔细检查。
             </p>
           </div>
         </div>
@@ -29,25 +29,31 @@
 
       <div class="bg-white rounded-xl shadow-lg card-pad section-gap">
         <h2 class="section-title">问题分类（单选）</h2>
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            @click="openCategoryPicker"
-            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-left hover:border-blue-500 transition-colors"
-          >
-            <p class="text-xs text-gray-500 mb-0.5">当前分类</p>
-            <p class="text-sm font-semibold text-gray-800">
-              {{ selectedCategoryName || '请选择问题分类（必选）' }}
-            </p>
-          </button>
-          <button
-            type="button"
-            @click="openCategoryPicker"
-            class="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-3 py-2 rounded-lg"
-          >
-            选择
-          </button>
+        <div class="space-y-3 sm:space-y-4">
+          <div v-for="group in categories" :key="group.group" class="space-y-1.5 sm:space-y-2">
+            <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider">{{ group.group }}</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              <button
+                v-for="cat in group.items"
+                :key="cat.id"
+                type="button"
+                @click="selectedCategory = cat.id"
+                :class="[
+                  'w-full text-left border rounded-lg px-3 py-1 transition-colors',
+                  selectedCategory === cat.id ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 hover:border-blue-300'
+                ]"
+              >
+                <span class="text-sm font-semibold">{{ cat.icon }} {{ cat.name }}</span>
+              </button>
+            </div>
+          </div>
         </div>
+        <p v-if="!selectedCategory" class="mt-3 text-xs text-amber-600">
+          请选择一个问题分类（必选）
+        </p>
+        <p v-else class="mt-3 text-xs text-green-600">
+          已选择：{{ selectedCategoryName }}
+        </p>
       </div>
 
       <div class="bg-white rounded-xl shadow-lg card-pad section-gap">
@@ -63,7 +69,7 @@
         </div>
 
         <div
-          class="border-2 border-dashed rounded-lg p-3.5 text-center transition-colors cursor-pointer"
+          class="border-2 border-dashed rounded-lg p-2 text-center transition-colors cursor-pointer"
           :class="dragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-500'"
           @click="$refs.fileInput.click()"
           @dragenter.prevent="dragging = true"
@@ -79,18 +85,9 @@
             @change="handleFileSelect"
             class="hidden"
           />
-
-          <div class="flex items-center justify-center gap-3">
-            <div class="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-            </div>
-            <div class="text-left">
-              <p class="text-gray-700 text-sm font-medium">点击选择文件（支持拖拽）</p>
-              <p class="text-xs text-gray-500 mt-0.5">jpg/jpeg/png，≤10MB（原图直传：不压缩、不加水印、不修改EXIF）</p>
-            </div>
-          </div>
+          <div class="text-3xl mb-1">📁</div>
+          <p class="text-sm text-gray-600 mb-0.5">点击或拖拽图片到此处</p>
+          <p class="text-xs text-gray-500">支持 JPG、PNG 格式，单个文件不超过 10MB</p>
         </div>
 
         <div v-if="selectedFiles.length > 0" class="mt-3">
@@ -109,7 +106,11 @@
                   <p class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</p>
                 </div>
               </div>
-              <button type="button" @click="removeFile(index)" class="text-red-500 hover:text-red-700">
+              <button
+                type="button"
+                @click="removeFile(index)"
+                class="text-red-500 hover:text-red-700 ml-2 shrink-0"
+              >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -120,82 +121,55 @@
       </div>
 
       <div class="bg-white rounded-xl shadow-lg card-pad section-gap">
-        <h2 class="section-title">情况描述（选填）</h2>
+        <h2 class="section-title">问题描述（可选）</h2>
         <textarea
           v-model="description"
-          maxlength="100"
+          placeholder="请简要描述问题情况（选填）"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           rows="2"
-          class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="简单描述一下情况，100字以内"
         ></textarea>
-        <p class="text-sm text-gray-500 mt-1">{{ description.length }}/100</p>
-      </div>
-
-      <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3.5 section-gap rounded-r-lg">
-        <div class="flex items-start">
-          <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <p class="text-sm text-yellow-700">
-              <strong>最后确认：</strong>请再次确认没有拍摄人脸、车牌、室内等隐私内容。证据一旦上传不可删除。
-            </p>
-          </div>
-        </div>
       </div>
 
       <button
-        @click="requestUpload"
+        @click="openComplianceModal"
         :disabled="!canUpload || uploading"
-        class="w-full btn-primary disabled:bg-gray-400 disabled:cursor-not-allowed"
+        class="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed section-gap"
       >
-        {{ uploading ? `上传中 ${uploadProgress}%` : '确认上传' }}
+        <span v-if="uploading">
+          <span class="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></span>
+          {{ uploadStatusText || '上传中...' }}
+        </span>
+        <span v-else>
+          确认上传 {{ selectedFiles.length > 0 ? `(${selectedFiles.length}个文件)` : '' }}
+        </span>
       </button>
 
-      <div v-if="uploading || uploadProgress > 0" class="mt-3 bg-white rounded-lg border border-gray-200 p-3">
-        <div class="flex items-center justify-between text-xs text-gray-600 mb-1.5">
-          <span>{{ uploadStatusText }}</span>
-          <span>{{ uploadProgress }}%</span>
-        </div>
-        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            class="h-full bg-blue-600 transition-all duration-300"
-            :style="{ width: `${uploadProgress}%` }"
-          ></div>
-        </div>
-      </div>
-
-      <!-- 强制合规确认（ZHILING 要求：上传前必须弹窗并需用户确认） -->
       <div
         v-if="showComplianceModal"
-        class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+        class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
         @click="closeComplianceModal"
       >
-        <div class="bg-white rounded-xl max-w-lg w-full p-4" @click.stop>
-          <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-3">上传合规确认</h3>
-          <div class="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-            <p class="flex items-center gap-1.5 font-semibold">
-              <span aria-hidden="true">⚠️</span>
-              审核提醒
-            </p>
-            <p class="mt-1 text-amber-800">
-              为避免上传涉黄、暴力、隐私等不合规图片，上传内容需经管理员审核通过后才会在前台显示。
-            </p>
+        <div class="bg-white rounded-xl max-w-md w-full p-5" @click.stop>
+          <h3 class="text-lg font-bold mb-3">上传前确认</h3>
+          <div class="space-y-2 text-sm text-gray-700 mb-4">
+            <p>请确认您上传的内容符合以下要求：</p>
+            <ul class="list-disc list-inside space-y-1 text-gray-600">
+              <li>拍摄的是小区公共环境问题</li>
+              <li>不包含住户室内、门窗内场景</li>
+              <li>不包含清晰可辨识的人脸</li>
+              <li>不包含清晰可辨识的车牌</li>
+              <li>不涉及个人隐私信息</li>
+            </ul>
           </div>
-          <div class="text-sm text-gray-700 space-y-2">
-            <p><strong>1.</strong> 仅拍摄小区公共区域，不要拍住户室内、门窗内景、人脸、车牌及个人隐私。</p>
-            <p><strong>2.</strong> 上传后证据将进入不可删除的留存链条（管理员仅可隐藏不合规的无效内容，不会删除）。</p>
-            <p><strong>3.</strong> 本站会读取并留存原图 EXIF（如拍摄时间、GPS），但不会修改原图文件内容。</p>
-          </div>
-
-          <label class="mt-4 flex items-start gap-2 text-sm text-gray-700 cursor-pointer group">
-            <input type="checkbox" v-model="complianceChecked" class="mt-1" />
-            <span class="group-hover:text-blue-600 transition-colors">我已确认以上内容，愿意继续上传。</span>
+          <label class="flex items-start gap-2 mb-4 cursor-pointer">
+            <input
+              type="checkbox"
+              v-model="complianceChecked"
+              class="mt-0.5 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            />
+            <span class="text-sm text-gray-700">我已确认以上内容符合要求</span>
           </label>
-
-          <div class="mt-4 flex gap-2.5">
+          <div class="flex gap-3">
             <button
               class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg text-sm font-medium"
               @click="closeComplianceModal"
@@ -209,76 +183,6 @@
             >
               确认上传
             </button>
-          </div>
-        </div>
-      </div>
-
-      <div
-        v-if="showCategoryPicker"
-        class="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-0 sm:p-4 transition-opacity duration-300 ease-in-out"
-        @click="closeCategoryPicker"
-      >
-        <div class="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-2xl max-h-[85vh] flex flex-col transform transition-all duration-300 ease-in-out sm:translate-y-0 translate-y-4 opacity-0"
-             :class="{'opacity-100 sm:translate-y-0 translate-y-0': showCategoryPicker}" @click.stop>
-          <div class="p-3 border-b flex-shrink-0">
-            <div class="flex items-center justify-between gap-2">
-              <h3 class="text-base sm:text-lg font-bold text-gray-800">选择问题分类</h3>
-              <button class="text-gray-500 hover:text-gray-700" @click="closeCategoryPicker">关闭</button>
-            </div>
-            <div class="relative mt-2">
-              <input
-                ref="categorySearchInput"
-                v-model="categoryKeyword"
-                type="text"
-                placeholder="搜索分类关键词..."
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <button
-                v-if="categoryKeyword"
-                type="button"
-                @click="clearSearch"
-                class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div class="overflow-y-auto p-3 space-y-3 flex-1">
-            <div v-for="group in filteredCategories" :key="group.group" class="space-y-1">
-              <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider px-1">{{ group.group }}</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                <button
-                  v-for="(cat, index) in group.items"
-                  :key="cat.id"
-                  type="button"
-                  @click="selectCategory(cat.id)"
-                  :class="[
-                    'w-full text-left border rounded-lg px-2.5 py-1.5 transition-colors',
-                    selectedCategory === cat.id ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 hover:border-blue-300',
-                    activeCategoryIndex === index ? 'ring-2 ring-blue-500' : ''
-                  ]"
-                >
-                  <div class="text-sm font-semibold leading-snug" v-html="`${cat.icon} ${highlightKeyword(cat.name, categoryKeyword)}`"></div>
-                </button>
-              </div>
-            </div>
-            <div v-if="filteredCategories.length === 0" class="text-center py-8">
-              <div class="text-4xl mb-3">🔍</div>
-              <p class="text-sm text-gray-500 mb-2">未找到与 "<span class="font-medium text-gray-700">{{ categoryKeyword }}</span>" 相关的分类</p>
-              <p class="text-xs text-gray-400 mb-4">请尝试其他关键词或查看所有分类</p>
-              <button
-                type="button"
-                @click="clearSearch"
-                class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                清除搜索
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -299,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { evidenceApi } from '@/api'
 
@@ -312,14 +216,12 @@ const selectedCategory = ref('')
 const description = ref('')
 const dragging = ref(false)
 const showComplianceModal = ref(false)
-const showCategoryPicker = ref(false)
 const complianceChecked = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
 const uploadStatusText = ref('')
 const uploadSuccess = ref(false)
 const uploadError = ref('')
-const categoryKeyword = ref('')
 
 const categories = [
   {
@@ -375,308 +277,99 @@ const selectedCategoryName = computed(() => {
   return ''
 })
 
-const filteredCategories = computed(() => {
-  const kw = categoryKeyword.value.trim()
-  if (!kw) return categories
-  
-  const lowerKw = kw.toLowerCase()
-  const filtered = []
-  
-  for (const group of categories) {
-    const filteredItems = group.items.filter((c) => 
-      c.name.toLowerCase().includes(lowerKw) || 
-      c.id.toLowerCase().includes(lowerKw)
-    )
-    if (filteredItems.length > 0) {
-      filtered.push({ ...group, items: filteredItems })
-    }
-  }
-  
-  return filtered
-})
-
-const highlightKeyword = (text, keyword) => {
-  if (!keyword.trim()) return text
-  const lowerKeyword = keyword.toLowerCase()
-  const lowerText = text.toLowerCase()
-  let result = ''
-  let lastIndex = 0
-  
-  while (true) {
-    const index = lowerText.indexOf(lowerKeyword, lastIndex)
-    if (index === -1) {
-      result += text.slice(lastIndex)
-      break
-    }
-    result += text.slice(lastIndex, index)
-    result += `<span class="bg-yellow-200 px-0.5 rounded">${text.slice(index, index + keyword.length)}</span>`
-    lastIndex = index + keyword.length
-  }
-  
-  return result
-}
-
-const categorySearchInput = ref(null)
-const activeCategoryIndex = ref(-1)
-
-const openCategoryPicker = () => {
-  showCategoryPicker.value = true
-  activeCategoryIndex.value = -1
-  // 延迟聚焦，确保DOM已经渲染
-  setTimeout(() => {
-    categorySearchInput.value?.focus()
-  }, 100)
-}
-const closeCategoryPicker = () => {
-  showCategoryPicker.value = false
-}
-const clearSearch = () => {
-  categoryKeyword.value = ''
-  // 清除后重新聚焦搜索框
-  setTimeout(() => {
-    categorySearchInput.value?.focus()
-  }, 100)
-}
-const selectCategory = (id) => {
-  selectedCategory.value = id
-  showCategoryPicker.value = false
+const formatFileSize = (size) => {
+  if (size < 1024) return size + ' B'
+  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB'
+  return (size / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
 const handleFileSelect = (event) => {
   const files = Array.from(event.target.files)
-  appendFiles(files)
+  addFiles(files)
 }
 
 const handleDrop = (event) => {
   dragging.value = false
-  const files = Array.from(event.dataTransfer?.files || [])
-  appendFiles(files)
+  const files = Array.from(event.dataTransfer.files)
+  addFiles(files)
 }
 
-const appendFiles = (files) => {
-  const validFiles = files.filter(file => {
-    const name = String(file?.name || '').toLowerCase()
-    const type = String(file?.type || '').toLowerCase()
-    const isImage = type === 'image/jpeg' || type === 'image/jpg' || type === 'image/png' || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png')
-    const isSizeValid = isImage ? file.size <= MAX_INPUT_IMAGE_BYTES : false
-    
-    if (!isImage) {
-      alert('仅支持 jpg、jpeg、png 格式')
-      return false
-    }
-    if (!isSizeValid) {
-      alert('图片大小不能超过10MB')
-      return false
-    }
-    return true
-  })
+const addFiles = (files) => {
+  const imageFiles = files.filter(file => 
+    file.type.startsWith('image/') && 
+    file.size <= MAX_INPUT_IMAGE_BYTES
+  )
   
-  selectedFiles.value = [...selectedFiles.value, ...validFiles]
+  if (imageFiles.length === 0) {
+    alert('请选择有效的图片文件（JPG/PNG，单个不超过10MB）')
+    return
+  }
+  
+  selectedFiles.value = [...selectedFiles.value, ...imageFiles]
+  uploadSuccess.value = false
+  uploadError.value = ''
 }
 
 const removeFile = (index) => {
   selectedFiles.value.splice(index, 1)
 }
 
-const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
-}
-
-const requestUpload = () => {
+const openComplianceModal = () => {
   if (!canUpload.value) return
-  showComplianceModal.value = true
   complianceChecked.value = false
+  showComplianceModal.value = true
 }
 
 const closeComplianceModal = () => {
   showComplianceModal.value = false
-}
-
-const PRESET_THUMB_CLIENT = { maxW: 360, maxH: 360, quality: 0.72 }
-const PRESET_PREVIEW_CLIENT = { maxW: 1600, maxH: 1600, quality: 0.82 }
-
-function calcFitSize(srcW, srcH, maxW, maxH) {
-  if (!srcW || !srcH) return { width: maxW, height: maxH }
-  const ratio = Math.min(maxW / srcW, maxH / srcH, 1)
-  return {
-    width: Math.max(1, Math.round(srcW * ratio)),
-    height: Math.max(1, Math.round(srcH * ratio)),
-  }
-}
-
-function loadImageFromBlob(blob) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(blob)
-    const img = new Image()
-    img.decoding = 'async'
-    img.onload = () => {
-      URL.revokeObjectURL(url)
-      resolve(img)
-    }
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error('IMAGE_LOAD_FAILED'))
-    }
-    img.src = url
-  })
-}
-
-async function buildJpegVariantBlob(fileOrBlob, preset) {
-  const img = await loadImageFromBlob(fileOrBlob)
-  const { width, height } = calcFitSize(img.naturalWidth, img.naturalHeight, preset.maxW, preset.maxH)
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('CANVAS_CONTEXT_UNAVAILABLE')
-  ctx.drawImage(img, 0, 0, width, height)
-
-  const outBlob = await new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (b) => {
-        if (!b) return reject(new Error('TO_BLOB_FAILED'))
-        resolve(b)
-      },
-      'image/jpeg',
-      preset.quality,
-    )
-  })
-  return outBlob
-}
-
-async function buildPlaceholderJpegBlob() {
-  const canvas = document.createElement('canvas')
-  canvas.width = 1
-  canvas.height = 1
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('CANVAS_CONTEXT_UNAVAILABLE')
-  ctx.fillStyle = '#808080'
-  ctx.fillRect(0, 0, 1, 1)
-  const outBlob = await new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (b) => {
-        if (!b) return reject(new Error('TO_BLOB_FAILED'))
-        resolve(b)
-      },
-      'image/jpeg',
-      0.7,
-    )
-  })
-  return outBlob
+  complianceChecked.value = false
 }
 
 const confirmAndUpload = async () => {
-  if (!complianceChecked.value) return
-  showComplianceModal.value = false
-  await doUpload()
-}
-
-const doUpload = async () => {
-  if (!canUpload.value) return
-
+  if (!complianceChecked.value || !canUpload.value) return
+  
   uploading.value = true
   uploadProgress.value = 0
   uploadStatusText.value = '准备上传...'
   uploadSuccess.value = false
   uploadError.value = ''
-
+  
   try {
-    const formData = new FormData()
-
-    // 原图必须保持不改动；缩略图/预览图仅用于展示，由前端生成并作为派生文件上传。
-    const placeholder = await buildPlaceholderJpegBlob()
-
+    const category = selectedCategory.value
+    const desc = description.value.trim()
+    
     for (let i = 0; i < selectedFiles.value.length; i++) {
-      const raw = selectedFiles.value[i]
-      formData.append('files', raw)
-
-      // 为了保证服务端按索引一一对应，thumb/preview 这里“必定 append”（失败则用 placeholder 占位）
-      try {
-        const [thumbBlob, previewBlob] = await Promise.all([
-          buildJpegVariantBlob(raw, PRESET_THUMB_CLIENT),
-          buildJpegVariantBlob(raw, PRESET_PREVIEW_CLIENT),
-        ])
-        formData.append('thumbs', thumbBlob, `thumb-${raw.name}.jpg`)
-        formData.append('previews', previewBlob, `preview-${raw.name}.jpg`)
-      } catch (e) {
-        console.warn('client build variant failed:', raw?.name, e)
-        formData.append('thumbs', placeholder, `thumb-${raw.name}.jpg`)
-        formData.append('previews', placeholder, `preview-${raw.name}.jpg`)
-      }
+      const file = selectedFiles.value[i]
+      uploadStatusText.value = `正在上传 ${i + 1}/${selectedFiles.value.length}: ${file.name}`
+      
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('category', category)
+      if (desc) formData.append('description', desc)
+      
+      await evidenceApi.upload(formData, (progress) => {
+        const fileProgress = (progress.loaded / progress.total) * 100
+        const totalProgress = ((i + fileProgress / 100) / selectedFiles.value.length) * 100
+        uploadProgress.value = Math.round(totalProgress)
+      })
     }
-
-    formData.append('category', selectedCategory.value)
-    formData.append('description', description.value)
-
-    await evidenceApi.upload(formData, (progressEvent) => {
-      const total = Number(progressEvent?.total || 0)
-      const loaded = Number(progressEvent?.loaded || 0)
-      if (total > 0) {
-        const percent = Math.max(1, Math.min(99, Math.round((loaded / total) * 100)))
-        uploadProgress.value = percent
-      } else {
-        uploadProgress.value = Math.max(uploadProgress.value, 30)
-      }
-      uploadStatusText.value = '正在上传文件...'
-    })
-
-    uploadProgress.value = 100
-    uploadStatusText.value = '上传完成，等待管理员审核展示'
-
+    
     uploadSuccess.value = true
     selectedFiles.value = []
     selectedCategory.value = ''
     description.value = ''
-
-    setTimeout(() => {
-      uploadSuccess.value = false
-      router.push('/evidence')
-    }, 2000)
+    closeComplianceModal()
   } catch (error) {
-    uploadError.value =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error?.message ||
-      '上传失败，请重试'
-    uploadStatusText.value = '上传失败，请重试'
-    uploadProgress.value = 0
+    console.error('上传失败:', error)
+    uploadError.value = error.response?.data?.error || '上传失败，请重试'
   } finally {
     uploading.value = false
+    uploadProgress.value = 0
+    uploadStatusText.value = ''
   }
 }
 
 const goBack = () => {
   router.push('/')
 }
-
-// 键盘事件处理
-const handleKeydown = (event) => {
-  if (event.key === 'Escape' && showCategoryPicker.value) {
-    closeCategoryPicker()
-  } else if (showCategoryPicker.value) {
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      activeCategoryIndex.value = (activeCategoryIndex.value + 1) % filteredCategories.value.length
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      activeCategoryIndex.value = activeCategoryIndex.value <= 0 ? filteredCategories.value.length - 1 : activeCategoryIndex.value - 1
-    } else if (event.key === 'Enter' && activeCategoryIndex.value >= 0) {
-      event.preventDefault()
-      selectCategory(filteredCategories.value[activeCategoryIndex.value].id)
-    }
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-})
-
 </script>

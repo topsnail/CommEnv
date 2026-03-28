@@ -46,7 +46,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 section-gap">
+      <div class="grid grid-cols-2 gap-3 sm:gap-4 section-gap">
         <div class="bg-white rounded-xl shadow-lg card-pad hover:shadow-xl transition-shadow">
           <div class="flex items-center mb-2">
             <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
@@ -56,7 +56,7 @@
             </div>
             <h2 class="text-base sm:text-lg font-bold text-gray-800">我要上传</h2>
           </div>
-          <p class="text-gray-600 text-xs sm:text-sm mb-2">拍摄小区公共环境问题，上传保存证据</p>
+          <p class="text-gray-600 text-xs sm:text-sm mb-2">拍摄上传小区公共环境问题</p>
           <button @click="goToUpload" class="w-full btn-primary !py-2 !text-sm">
             立即上传
           </button>
@@ -72,7 +72,7 @@
             <h2 class="text-base sm:text-lg font-bold text-gray-800">查看证据</h2>
           </div>
           <p class="text-gray-600 text-xs sm:text-sm mb-2">浏览已上传的图片列表</p>
-          <button @click="goToEvidence" class="w-full bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors py-2 px-4 text-xs sm:text-sm">
+          <button @click="goToEvidence" class="w-full bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors py-2 px-4 text-sm">
             查看列表
           </button>
         </div>
@@ -125,9 +125,9 @@
             </div>
           </div>
           <div class="flex-1">
-            <h2 class="section-title !mb-2 !text-sm">关于本站</h2>
-            <p class="text-xs text-gray-700 leading-relaxed">
-              本站为非盈利工具，仅用于客观记录小区公共环境问题，倡导住户主动上传原始图片，统一分类、安全留存。平台不收集个人隐私、不从事商业经营、不宣称具有司法效力，仅作为资料存储与展示使用，旨在为物业整改、投诉维权提供真实素材，共同监督物业服务，营造整洁、安全、有序的居住环境。
+            <h2 class="section-title !mb-2 !text-sm !text-gray-600">关于本站</h2>
+            <p class="text-xs text-gray-500 leading-relaxed">
+              本站为非盈利公益工具，仅用于客观记录小区公共环境问题，倡导住户主动上传原始图片，统一分类、安全留存。平台不收集个人隐私、不从事商业经营、不宣称具有司法效力，仅作为资料存储与展示使用，旨在为物业整改、投诉维权提供真实素材，共同监督物业服务，营造整洁、安全、有序的居住环境。
             </p>
           </div>
         </div>
