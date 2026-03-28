@@ -264,7 +264,10 @@ export async function onRequestPost(context) {
         }
       } catch (previewErr) {
         // 派生图失败不影响 original 入库与 EXIF 解析；前台会降级到 preview 或提示稍后重试
-        if (!String(previewErr?.message || '').includes('IMAGE_TRANSFORM_UNAVAILABLE')) console.warn('preview warmup failed:', id, previewErr)
+        const pe = String(previewErr?.message || '')
+        if (!pe.includes('IMAGE_TRANSFORM_UNAVAILABLE') && !pe.includes('IMAGE_DECODE_FAILED')) {
+          console.warn('preview warmup failed:', id, previewErr)
+        }
       }
 
       out.push({

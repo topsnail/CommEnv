@@ -1,6 +1,6 @@
 import { ensureSchema } from '../../db/schema.js'
 import { requireAdminSession } from '../../lib/adminAuth.js'
-import { MAX_DERIVED_IMAGE_BYTES, buildWebpOrJpegUnderBudget } from '../../lib/imageBudget.js'
+import { MAX_DERIVED_IMAGE_BYTES, buildPreviewVariantUnderBudget } from '../../lib/imageBudget.js'
 
 const PRESETS = {
   small: { maxW: 400, maxH: 400, startQuality: 0.7, keyPrefix: 'small', minEdge: 40 },
@@ -20,6 +20,18 @@ function responseFromCached(cached, extraHeaders = {}) {
   return new Response(cached.body, { headers })
 }
 
+function previewUnavailableResponse() {
+  return new Response('预览暂不可用（服务端无法生成压缩图）', {
+    status: 503,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Preview-Fallback': 'unavailable',
+    },
+  })
+}
+
 export async function onRequestGet(context) {
   const { request, env, params } = context
   try {
@@ -31,8 +43,6 @@ export async function onRequestGet(context) {
     const kindParam = new URL(request.url).searchParams.get('kind')
     const kind = kindParam === 'preview' ? 'preview' : kindParam === 'small' ? 'small' : 'thumb'
     const preset = PRESETS[kind]
-    const acceptHeader = request.headers.get('accept') || ''
-    const supportsWebP = acceptHeader.includes('image/webp')
     await ensureSchema(env)
 
     const row = await env.DB.prepare(
@@ -60,33 +70,44 @@ export async function onRequestGet(context) {
     const secondaryKey = kind === 'thumb' ? row.preview_key : kind === 'small' ? row.preview_key : null
 
     for (const keyCandidate of [primaryKey, secondaryKey].filter(Boolean)) {
-      const cached = await env.R2.get(String(keyCandidate))
-      if (!cached) continue
-      const sz = cached.size
-      if (typeof sz === 'number' && sz > MAX_DERIVED_IMAGE_BYTES) continue
-      const extra = {}
-      if (kind === 'thumb' && row.preview_key && String(keyCandidate) === String(row.preview_key)) {
-        extra['X-Preview-Fallback'] = 'preview-cached'
+      try {
+        const cached = await env.R2.get(String(keyCandidate))
+        if (!cached) continue
+        const sz = cached.size
+        if (typeof sz === 'number' && sz > MAX_DERIVED_IMAGE_BYTES) continue
+        const extra = {}
+        if (kind === 'thumb' && row.preview_key && String(keyCandidate) === String(row.preview_key)) {
+          extra['X-Preview-Fallback'] = 'preview-cached'
+        }
+        return responseFromCached(cached, extra)
+      } catch (cacheErr) {
+        console.error('preview cache skip:', keyCandidate, cacheErr)
       }
-      return responseFromCached(cached, extra)
     }
 
     const original = await env.R2.get(String(row.original_key || ''))
     if (!original) return new Response('文件不存在', { status: 404 })
     const bytes = await original.arrayBuffer()
 
+    let variantBytes
+    let contentType
     try {
-      const { buffer: variantBytes, contentType } = await buildWebpOrJpegUnderBudget(bytes, {
+      const built = await buildPreviewVariantUnderBudget(bytes, {
         maxW: preset.maxW,
         maxH: preset.maxH,
         startQuality: preset.startQuality,
         minEdge: preset.minEdge,
-        preferWebp: supportsWebP,
         maxBytes: MAX_DERIVED_IMAGE_BYTES,
       })
-      const ext = contentType.includes('webp') ? 'webp' : 'jpg'
-      const variantKey = `${preset.keyPrefix}/${id}.${ext}`
+      variantBytes = built.buffer
+      contentType = built.contentType
+    } catch (err) {
+      console.error('preview generate:', id, kind, err)
+      return previewUnavailableResponse()
+    }
 
+    const variantKey = `${preset.keyPrefix}/${id}.jpg`
+    try {
       await env.R2.put(variantKey, variantBytes, { httpMetadata: { contentType } })
       if (kind === 'preview') {
         await env.DB.prepare('UPDATE evidence SET preview_key = ? WHERE id = ?').bind(variantKey, id).run()
@@ -95,29 +116,19 @@ export async function onRequestGet(context) {
       } else {
         await env.DB.prepare('UPDATE evidence SET thumb_key = ? WHERE id = ?').bind(variantKey, id).run()
       }
-
-      return new Response(variantBytes, {
-        status: 200,
-        headers: {
-          'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=604800',
-          'X-Content-Type-Options': 'nosniff',
-        },
-      })
-    } catch (err) {
-      if (String(err?.message || '').includes('IMAGE_TRANSFORM_UNAVAILABLE')) {
-        return new Response('预览暂不可用（服务端无法生成压缩图）', {
-          status: 503,
-          headers: {
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Cache-Control': 'no-store',
-            'X-Content-Type-Options': 'nosniff',
-            'X-Preview-Fallback': 'unavailable',
-          },
-        })
-      }
-      throw err
+    } catch (storeErr) {
+      // 生成成功但写入失败时仍返回图片，避免 Evidence 页大量 500
+      console.error('preview store failed:', id, kind, storeErr)
     }
+
+    return new Response(variantBytes, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=604800',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
   } catch (e) {
     console.error('Preview error:', e)
     return new Response('获取预览失败', { status: 500 })
