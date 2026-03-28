@@ -89,46 +89,46 @@
 
         <div v-else class="bg-white rounded-lg shadow overflow-hidden">
           <div class="overflow-x-auto">
-          <table class="table-fixed w-full divide-y divide-gray-200">
+          <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   <input type="checkbox" :checked="allSelected" @change="toggleSelectAll($event)" />
                 </th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-18">ID</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-14">类型</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-70">分类</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-30">拍摄时间</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-30">上传时间</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">GPS</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-26">文件大小</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-22">状态</th>
-                <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-42">操作</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">ID</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">类型</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">分类</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">拍摄时间</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">上传时间</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">GPS</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">文件大小</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">状态</th>
+                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50 shadow-lg z-10">操作</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="evidence in filteredEvidence" :key="evidence.id">
-                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">
                   <input type="checkbox" :value="evidence.id" v-model="selectedIds" />
                 </td>
-                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ evidence.id.slice(-8) }}</td>
-                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900 font-mono">{{ evidence.id.slice(-8) }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">
                   图片
                 </td>
                 <td
-                  class="px-3 py-3 whitespace-nowrap text-sm text-gray-900 truncate"
+                  class="px-2 py-2 whitespace-nowrap text-xs text-gray-900"
                   :title="getCategoryName(evidence.category)"
                 >
-                  {{ getCategoryName(evidence.category) }}
+                  {{ getCategoryName(evidence.category).length > 7 ? getCategoryName(evidence.category).slice(0, 7) + '...' : getCategoryName(evidence.category) }}
                 </td>
-                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.exif?.datetimeOriginal || evidence.timestamp) }}</td>
-                <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900">{{ formatDate(evidence.timestamp) }}</td>
-                <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate" :title="formatGps(evidence.exif?.gps)">{{ formatGps(evidence.exif?.gps) }}</td>
-                <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-900 truncate" :title="`${evidence.originalSize} bytes`">{{ formatFileSize(evidence.originalSize) }}</td>
-                <td class="px-3 py-3 whitespace-nowrap">
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">{{ formatDate(evidence.exif?.datetimeOriginal || evidence.timestamp) }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">{{ formatDate(evidence.timestamp) }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900 truncate max-w-[120px]" :title="formatGps(evidence.exif?.gps)">{{ formatGps(evidence.exif?.gps) }}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900 truncate" :title="`${evidence.originalSize} bytes`">{{ formatFileSize(evidence.originalSize) }}</td>
+                <td class="px-2 py-2 whitespace-nowrap">
                   <span
                     :class="[
-                      'px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full',
+                      'px-1.5 py-0.5 inline-flex text-xs leading-4 font-medium rounded',
                       evidence.status === 'normal'
                         ? 'bg-green-100 text-green-800'
                         : evidence.status === 'pending'
@@ -139,27 +139,27 @@
                     {{ evidence.status === 'normal' ? '正常' : (evidence.status === 'pending' ? '待审核' : '已隐藏') }}
                   </span>
                 </td>
-                <td class="px-3 py-3 whitespace-nowrap text-sm font-medium">
-                  <div class="flex items-center gap-2">
+                <td class="px-2 py-2 whitespace-nowrap text-xs font-medium sticky right-0 bg-white shadow-lg z-10">
+                  <div class="flex items-center gap-1">
                     <button
                       @click="viewDetail(evidence)"
-                      class="inline-flex items-center px-2.5 py-1.5 rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs sm:text-sm font-semibold"
+                      class="inline-flex items-center px-2 py-1 rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-medium"
                     >
                       查看
                     </button>
                     <button
                       v-if="!evidence.hidden"
                       @click="hideEvidence(evidence.id)"
-                      class="inline-flex items-center px-2.5 py-1.5 rounded-md border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-xs sm:text-sm font-semibold"
+                      class="inline-flex items-center px-2 py-1 rounded border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium"
                     >
                       隐藏
                     </button>
                     <button
                       v-else
                       @click="showEvidence(evidence.id)"
-                      class="inline-flex items-center px-2.5 py-1.5 rounded-md border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 text-xs sm:text-sm font-semibold"
+                      class="inline-flex items-center px-2 py-1 rounded border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium"
                     >
-                      {{ evidence.status === 'pending' ? '通过审核' : '恢复显示' }}
+                      {{ evidence.status === 'pending' ? '通过' : '恢复' }}
                     </button>
                   </div>
                 </td>

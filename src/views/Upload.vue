@@ -28,32 +28,44 @@
       </div>
 
       <div class="bg-white rounded-xl shadow-lg card-pad section-gap">
-        <h2 class="section-title">问题分类（单选）</h2>
+        <div class="flex items-center gap-2 mb-3">
+          <h2 class="section-title !mb-0">问题分类（单选）</h2>
+          <span v-if="!selectedCategory" class="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            必选
+          </span>
+          <span v-else class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+            已选择
+          </span>
+        </div>
         <div class="space-y-3 sm:space-y-4">
-          <div v-for="group in categories" :key="group.group" class="space-y-1.5 sm:space-y-2">
-            <h3 class="text-xs font-medium text-gray-500 uppercase tracking-wider">{{ group.group }}</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          <div v-for="(group, index) in categories" :key="group.group" :class="[
+            'space-y-1.5 sm:space-y-2 p-2 sm:p-3 rounded-lg',
+            index % 2 === 0 ? 'bg-gray-50/50' : 'bg-blue-50/30'
+          ]">
+            <h3 class="text-xs font-medium text-gray-600 uppercase tracking-wider flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full" :class="index % 2 === 0 ? 'bg-gray-400' : 'bg-blue-400'"></span>
+              {{ group.group }}
+            </h3>
+            <div class="grid grid-cols-2 gap-1.5">
               <button
                 v-for="cat in group.items"
                 :key="cat.id"
                 type="button"
                 @click="selectedCategory = cat.id"
                 :class="[
-                  'w-full text-left border rounded-lg px-3 py-1 transition-colors',
-                  selectedCategory === cat.id ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-gray-200 hover:border-blue-300'
+                  'w-full text-left border rounded-lg px-2 sm:px-3 py-1.5 transition-all duration-200 h-9 sm:h-10 overflow-hidden',
+                  selectedCategory === cat.id 
+                    ? 'border-blue-600 bg-blue-100 text-blue-800 shadow-sm ring-1 ring-blue-300' 
+                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
                 ]"
               >
-                <span class="text-sm font-semibold">{{ cat.icon }} {{ cat.name }}</span>
+                <span class="text-xs sm:text-sm font-medium truncate block">{{ cat.icon }} {{ cat.name }}</span>
               </button>
             </div>
           </div>
         </div>
-        <p v-if="!selectedCategory" class="mt-3 text-xs text-amber-600">
-          请选择一个问题分类（必选）
-        </p>
-        <p v-else class="mt-3 text-xs text-green-600">
-          已选择：{{ selectedCategoryName }}
-        </p>
       </div>
 
       <div class="bg-white rounded-xl shadow-lg card-pad section-gap">
@@ -225,43 +237,58 @@ const uploadError = ref('')
 
 const categories = [
   {
-    group: '环境与卫生',
+    group: '环境卫生与绿化管理',
     items: [
-      { id: 'CAT01', name: '环境卫生脏乱，绿化养护缺失', icon: '🧹' },
-      { id: 'CAT02', name: '垃圾清运不及时，异味油污严重', icon: '🗑️' },
-      { id: 'CAT03', name: '楼道堆物占道，小广告泛滥', icon: '📌' }
+      { id: 'CAT01', name: '楼道电梯脏乱，小广告乱贴', icon: '🧹' },
+      { id: 'CAT02', name: '垃圾满溢异味重，大件长期堆放', icon: '🗑️' },
+      { id: 'CAT03', name: '绿化荒芜杂草多，绿植枯萎死亡', icon: '🌿' },
+      { id: 'CAT04', name: '卫生死角长期无人清理，无定期深度保洁', icon: '🧽' }
     ]
   },
   {
-    group: '设施与安全',
+    group: '基础设施与公共设备',
     items: [
-      { id: 'CAT04', name: '电梯故障频发，维保记录缺失', icon: '🛗' },
-      { id: 'CAT05', name: '公共设施破损，路灯监控失效', icon: '📷' },
-      { id: 'CAT06', name: '道路积水破损，供水水质异常', icon: '💧' },
-      { id: 'CAT07', name: '外墙脱落渗水，建筑本体破损', icon: '🏚️' },
-      { id: 'CAT08', name: '消防通道堵塞，消防器材过期', icon: '🧯' },
-      { id: 'CAT09', name: '门禁安保松懈，外来人员随意进出', icon: '🚪' }
+      { id: 'CAT05', name: '电梯故障频发，维保记录缺失或造假', icon: '🏢' },
+      { id: 'CAT06', name: '路灯楼道灯监控损坏，公共设施失修', icon: '💡' },
+      { id: 'CAT07', name: '路面破损积水，供水排水异常', icon: '🛣️' },
+      { id: 'CAT08', name: '外墙脱落渗水，建筑部件老化', icon: '🏚️' },
+      { id: 'CAT09', name: '门禁道闸故障，设备缺乏保养', icon: '🚪' }
     ]
   },
   {
-    group: '秩序与管理',
+    group: '公共安全与消防隐患',
     items: [
-      { id: 'CAT10', name: '电动车乱停，飞线充电隐患', icon: '⚡' },
-      { id: 'CAT11', name: '车辆无序停放，僵尸车占用公共资源', icon: '🅿️' },
-      { id: 'CAT12', name: '私搭乱建，违规拆改承重墙', icon: '🏗️' },
-      { id: 'CAT13', name: '养宠不文明，宠物粪便、噪音扰民', icon: '🐾' },
-      { id: 'CAT14', name: '商贩占道经营，底商油烟噪音扰民', icon: '🍢' }
+      { id: 'CAT10', name: '消防通道堵塞，器材过期失效', icon: '🧯' },
+      { id: 'CAT11', name: '门禁失控形同虚设，安保缺位疏于值守', icon: '👮' },
+      { id: 'CAT12', name: '电动车进楼，充电区域不规范', icon: '⚡' },
+      { id: 'CAT13', name: '私搭乱建，侵占公共绿地空间', icon: '🏗️' },
+      { id: 'CAT14', name: '应急物资不足，预案响应迟缓', icon: '🚨' },
+      { id: 'CAT15', name: '安全演练缺失或流于形式', icon: '📋' }
     ]
   },
   {
-    group: '服务与响应',
+    group: '居民行为与公共秩序',
     items: [
-      { id: 'CAT15', name: '物业通知滞后，信息公示不透明', icon: '📣' },
-      { id: 'CAT16', name: '公共收益不明，账目未公开', icon: '💰' },
-      { id: 'CAT17', name: '维修质量差，报修响应迟缓', icon: '🧰' },
-      { id: 'CAT18', name: '巡检记录缺失或造假', icon: '🧾' },
-      { id: 'CAT19', name: '应急物资不足，安全演练流于形式', icon: '🚨' },
-      { id: 'CAT20', name: '其他物业服务与响应问题', icon: '🧩' }
+      { id: 'CAT16', name: '车辆乱停占用通道与公共车位', icon: '🚗' },
+      { id: 'CAT17', name: '养宠不文明，粪便不清理扰民', icon: '🐾' },
+      { id: 'CAT18', name: '占道经营，噪音油烟扰民严重', icon: '🍢' },
+      { id: 'CAT19', name: '楼道堆放杂物占用公共空间', icon: '📦' }
+    ]
+  },
+  {
+    group: '物业管理与服务品质',
+    items: [
+      { id: 'CAT20', name: '停水停电未提前告知业主', icon: '💧' },
+      { id: 'CAT21', name: '公告信息长期不更新不透明', icon: '📢' },
+      { id: 'CAT22', name: '公共收益去向不明未公示', icon: '💰' },
+      { id: 'CAT23', name: '工作人员不规范服务态度差', icon: '👥' },
+      { id: 'CAT24', name: '报修电话无人接听回复迟缓', icon: '📞' },
+      { id: 'CAT25', name: '维修质量差问题反复出现', icon: '🔧' },
+      { id: 'CAT26', name: '维修后无回访跟踪机制', icon: '🔄' },
+      { id: 'CAT27', name: '疑难问题无方案无解决时限', icon: '❓' },
+      { id: 'CAT28', name: '设施缺乏保养巡检记录造假', icon: '📝' },
+      { id: 'CAT29', name: '公共照明浪费增加公摊费用', icon: '💡' },
+      { id: 'CAT30', name: '各类档案记录残缺管理混乱', icon: '📁' }
     ]
   }
 ]
